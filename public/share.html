@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学生详情 - 人工智能学院</title>
+<link rel="stylesheet" href="/lib/element-ui/lib/theme-chalk/index.css">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif; background: #f0f2f5; min-height: 100vh; }
+.no-print { }
+.top-bar { background: #fff; padding: 10px 20px; display: flex; align-items: center; gap: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.06); position: sticky; top: 0; z-index: 100; flex-wrap: wrap; }
+.top-bar .btn-group { display: flex; gap: 6px; margin-left: auto; }
+.top-bar a.back { color: #1890ff; text-decoration: none; font-size: 14px; white-space: nowrap; }
+.top-bar a.back:hover { text-decoration: underline; }
+.container { max-width: 780px; margin: 0 auto; padding: 20px 16px 40px; }
+.header-card { background: linear-gradient(135deg, #1890ff, #096dd9); color: #fff; border-radius: 12px; padding: 28px; margin-bottom: 16px; display: flex; align-items: center; box-shadow: 0 4px 16px rgba(24,144,255,.25); }
+.header-card .avatar { width: 64px; height: 64px; border-radius: 50%; background: rgba(255,255,255,.25); display: flex; align-items: center; justify-content: center; font-size: 30px; margin-right: 20px; flex-shrink: 0; }
+.header-card .hinfo .hname { font-size: 22px; font-weight: bold; }
+.header-card .hinfo .hno { font-size: 14px; opacity: .85; margin-top: 2px; }
+.header-card .hinfo .hmeta { font-size: 13px; opacity: .7; margin-top: 4px; }
+.header-card .hstatus { margin-left: auto; flex-shrink: 0; }
+.info-card { background: #fff; border-radius: 10px; padding: 20px 24px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+.info-card h3 { font-size: 15px; color: #333; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #f0f0f0; }
+.info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px 24px; }
+.info-item { display: flex; font-size: 13px; line-height: 1.8; }
+.info-item .label { color: #999; flex-shrink: 0; min-width: 60px; }
+.info-item .value { color: #333; }
+.grade-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.grade-table th { background: #fafafa; padding: 8px 10px; text-align: left; color: #666; font-weight: 600; border-bottom: 2px solid #e8e8e8; }
+.grade-table td { padding: 7px 10px; border-bottom: 1px solid #f0f0f0; color: #333; }
+.grade-table tr:hover td { background: #fafafa; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+.tag-pass { background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f; }
+.tag-fail { background: #fff1f0; color: #f5222d; border: 1px solid #ffa39e; }
+.tag-excellent { background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f; }
+.tag-good { background: #e6f7ff; color: #1890ff; border: 1px solid #91d5ff; }
+.tag-medium { background: #fff7e6; color: #fa8c16; border: 1px solid #ffd591; }
+.tag-pass-level { background: #fffbe6; color: #fadb14; border: 1px solid #ffe58f; }
+.gpa-box { display: flex; gap: 16px; margin-bottom: 14px; }
+.gpa-item { flex: 1; background: #fff; border-radius: 10px; padding: 16px 20px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+.gpa-item .num { font-size: 28px; font-weight: bold; color: #1890ff; }
+.gpa-item .lbl { font-size: 12px; color: #999; margin-top: 2px; }
+.qr-box { text-align: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid #f0f0f0; }
+.qr-box img { border-radius: 8px; width: 100px; height: 100px; }
+.qr-box .qr-label { font-size: 12px; color: #999; margin-bottom: 6px; }
+.not-found { text-align: center; padding: 80px 24px; }
+.not-found .icon { font-size: 64px; margin-bottom: 12px; }
+.not-found p { color: #999; font-size: 14px; margin-bottom: 20px; }
+@media (max-width: 600px) {
+  .header-card { flex-direction: column; text-align: center; }
+  .header-card .avatar { margin: 0 0 12px; }
+  .header-card .hstatus { margin: 12px 0 0; }
+  .info-grid { grid-template-columns: 1fr 1fr; }
+  .top-bar { padding: 8px 12px; }
+  .top-bar .btn-group { margin-left: 0; }
+}
+
+/* Print styles */
+@media print {
+  body { background: #fff; }
+  .no-print { display: none !important; }
+  .top-bar { display: none !important; }
+  .container { max-width: 100%; padding: 0; }
+  .header-card { box-shadow: none; border-radius: 0; }
+  .info-card { box-shadow: none; border: 1px solid #ddd; break-inside: avoid; }
+  .qr-box { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- 顶部操作栏 -->
+  <div class="top-bar no-print">
+    <a href="/q" class="back">← 返回查询</a>
+    <span style="color:#ccc;margin:0 8px">|</span>
+    <a href="/" class="back">🏠 管理系统</a>
+    <div class="btn-group">
+      <el-button size="small" icon="el-icon-link" @click="copyLink">复制链接</el-button>
+      <el-button size="small" icon="el-icon-printer" @click="printPage">打印</el-button>
+    </div>
+  </div>
+
+  <div class="container" v-if="student">
+    <!-- 头部卡片 -->
+    <div class="header-card">
+      <div class="avatar">{{ student.gender === '0' ? '👦' : '👧' }}</div>
+      <div class="hinfo">
+        <div class="hname">{{ student.studentName }}</div>
+        <div class="hno">学号：{{ student.studentNo }}</div>
+        <div class="hmeta">{{ student.className || '未分班' }} · {{ student.gender === '0' ? '男' : '女' }} · {{ student.nation || '汉族' }}</div>
+      </div>
+      <div class="hstatus">
+        <el-tag size="medium" type="success">在读</el-tag>
+      </div>
+    </div>
+
+    <!-- 绩点统计 -->
+    <div class="gpa-box">
+      <div class="gpa-item">
+        <div class="num">{{ avgScore }}</div>
+        <div class="lbl">平均分</div>
+      </div>
+      <div class="gpa-item">
+        <div class="num">{{ avgGPA }}</div>
+        <div class="lbl">平均绩点</div>
+      </div>
+      <div class="gpa-item">
+        <div class="num">{{ passCount }}/{{ grades.length }}</div>
+        <div class="lbl">通过/总课程</div>
+      </div>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card">
+      <h3>📋 基本信息</h3>
+      <div class="info-grid">
+        <div class="info-item" v-if="student.birthDate"><span class="label">出生日期</span><span class="value">{{ student.birthDate }}</span></div>
+        <div class="info-item" v-if="student.phone"><span class="label">手机号</span><span class="value">{{ student.phone }}</span></div>
+        <div class="info-item" v-if="student.email"><span class="label">邮箱</span><span class="value">{{ student.email }}</span></div>
+        <div class="info-item" v-if="student.idCard"><span class="label">身份证</span><span class="value">{{ student.idCard }}</span></div>
+        <div class="info-item" v-if="student.nativePlace"><span class="label">籍贯</span><span class="value">{{ student.nativePlace }}</span></div>
+        <div class="info-item" v-if="student.nation"><span class="label">民族</span><span class="value">{{ student.nation }}</span></div>
+        <div class="info-item" v-if="student.politicalStatus"><span class="label">政治面貌</span><span class="value">{{ student.politicalStatus }}</span></div>
+        <div class="info-item" v-if="student.enrollmentDate"><span class="label">入学日期</span><span class="value">{{ student.enrollmentDate }}</span></div>
+        <div class="info-item" v-if="student.graduationDate"><span class="label">毕业日期</span><span class="value">{{ student.graduationDate }}</span></div>
+        <div class="info-item" v-if="student.remark"><span class="label">备注</span><span class="value">{{ student.remark }}</span></div>
+      </div>
+      <div v-if="!student.birthDate && !student.phone && !student.nativePlace" style="color:#ccc;font-size:13px;text-align:center">暂无更多基本信息</div>
+    </div>
+
+    <!-- 住宿信息 -->
+    <div class="info-card" v-if="assignment">
+      <h3>🏠 住宿信息</h3>
+      <div class="info-grid">
+        <div class="info-item"><span class="label">宿舍楼</span><span class="value">{{ assignment.buildingName }}</span></div>
+        <div class="info-item"><span class="label">房间号</span><span class="value">{{ assignment.roomNo }}</span></div>
+        <div class="info-item"><span class="label">床位</span><span class="value">{{ assignment.bedNo }}</span></div>
+        <div class="info-item"><span class="label">入住日期</span><span class="value">{{ assignment.checkInDate }}</span></div>
+      </div>
+    </div>
+    <div class="info-card" v-if="!assignment">
+      <h3>🏠 住宿信息</h3>
+      <div style="color:#ccc;font-size:13px;text-align:center">暂未分配宿舍</div>
+    </div>
+
+    <!-- 成绩列表 -->
+    <div class="info-card">
+      <h3>📝 成绩记录（{{ grades.length }} 门）</h3>
+      <table class="grade-table" v-if="grades.length > 0">
+        <thead>
+          <tr><th>课程</th><th>学期</th><th>类型</th><th>分数</th><th>绩点</th><th>等级</th><th>通过</th></tr>
+        </thead>
+        <tbody>
+          <tr v-for="g in grades" :key="g.gradeId">
+            <td>{{ g.courseName }}</td>
+            <td>{{ g.semester }}</td>
+            <td>{{ g.examType }}</td>
+            <td>{{ g.score }}</td>
+            <td>{{ g.gradePoint }}</td>
+            <td><span :class="'tag tag-' + levelClass(g.gradeLevel)">{{ g.gradeLevel }}</span></td>
+            <td><span :class="'tag ' + (g.isPassed === '1' ? 'tag-pass' : 'tag-fail')">{{ g.isPassed === '1' ? '通过' : '未过' }}</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div v-if="grades.length === 0" style="color:#ccc;font-size:13px;text-align:center;padding:20px">暂无成绩记录</div>
+    </div>
+
+    <!-- QR 码 -->
+    <div class="qr-box info-card no-print">
+      <div class="qr-label">📱 扫一扫查看此学生信息</div>
+      <img :src="qrUrl" alt="QR Code">
+      <div style="font-size:11px;color:#bbb;margin-top:4px">{{ shareUrl }}</div>
+    </div>
+  </div>
+
+  <!-- 未找到 -->
+  <div class="not-found" v-if="notFound">
+    <div class="icon">🔍</div>
+    <p>学生不存在或已离校</p>
+    <el-button type="primary" @click="goQuery">返回查询</el-button>
+  </div>
+
+  <!-- 加载中 -->
+  <div class="not-found" v-if="loading">
+    <div class="icon">⏳</div>
+    <p>加载中...</p>
+  </div>
+</div>
+
+<script src="/lib/vue/dist/vue.js"></script>
+<script src="/lib/element-ui/lib/index.js"></script>
+<script src="/lib/axios/dist/axios.min.js"></script>
+<script>
+var api = axios.create({ baseURL: '/api' });
+var studentId = window.location.pathname.replace(/^\/s\//, '').replace(/[^0-9]/g, '');
+var origin = window.location.origin;
+
+new Vue({
+  el: '#app',
+  data: {
+    student: null,
+    grades: [],
+    assignment: null,
+    loading: true,
+    notFound: false,
+    shareUrl: origin + '/s/' + studentId,
+    qrUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=' + encodeURIComponent(origin + '/s/' + studentId)
+  },
+  computed: {
+    avgScore: function() {
+      if (this.grades.length === 0) return '-';
+      var sum = this.grades.reduce(function(a, g) { return a + (g.score || 0); }, 0);
+      return (sum / this.grades.length).toFixed(1);
+    },
+    avgGPA: function() {
+      if (this.grades.length === 0) return '-';
+      var sum = this.grades.reduce(function(a, g) { return a + (g.gradePoint || 0); }, 0);
+      return (sum / this.grades.length).toFixed(2);
+    },
+    passCount: function() {
+      return this.grades.filter(function(g) { return g.isPassed === '1'; }).length;
+    }
+  },
+  mounted: function() {
+    var self = this;
+    if (!studentId) { this.loading = false; this.notFound = true; return; }
+    api.get('/public/student/' + studentId).then(function(r) {
+      self.loading = false;
+      if (r.data.code === 200) {
+        self.student = r.data.data.student;
+        self.grades = r.data.data.grades || [];
+        self.assignment = r.data.data.assignment;
+        document.title = self.student.studentName + ' - 学生详情 - 人工智能学院';
+      } else {
+        self.notFound = true;
+      }
+    }).catch(function() {
+      self.loading = false;
+      self.notFound = true;
+    });
+  },
+  methods: {
+    levelClass: function(level) {
+      if (level === '优秀') return 'excellent';
+      if (level === '良好') return 'good';
+      if (level === '中等') return 'medium';
+      if (level === '及格') return 'pass-level';
+      return 'fail';
+    },
+    copyLink: function() {
+      var url = this.shareUrl;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(function() {
+          this.$message.success('链接已复制！可以粘贴分享给他人');
+        }.bind(this)).catch(function() {
+          this.fallbackCopy(url);
+        }.bind(this));
+      } else {
+        this.fallbackCopy(url);
+      }
+    },
+    fallbackCopy: function(text) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      this.$message.success('链接已复制！');
+    },
+    printPage: function() {
+      window.print();
+    },
+    goQuery: function() {
+      window.location.href = '/q';
+    }
+  }
+});
+</script>
+</body>
+</html>

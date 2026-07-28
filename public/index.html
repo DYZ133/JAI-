@@ -74,6 +74,24 @@ body { font-family: 'Microsoft YaHei', sans-serif; background: #f0f2f5; color: #
           </div>
         </div>
         <div class="card-box">
+          <h3 style="margin-bottom:12px">🔗 分享查询系统</h3>
+          <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+            <div>
+              <div style="font-size:13px;color:#666;margin-bottom:6px">公开查询地址（可分享给师生）：</div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <el-input :value="shareQueryUrl" size="small" style="width:320px" readonly></el-input>
+                <el-button size="small" type="primary" icon="el-icon-document-copy" @click="copyShareUrl">复制链接</el-button>
+                <el-button size="small" icon="el-icon-view" @click="openShareQuery">打开</el-button>
+              </div>
+              <div style="font-size:12px;color:#999;margin-top:6px">任何人可通过此链接查询在读学生信息，无需登录管理系统。</div>
+            </div>
+            <div style="text-align:center;flex-shrink:0">
+              <img :src="shareQrUrl" style="width:80px;height:80px;border-radius:6px" alt="QR">
+              <div style="font-size:11px;color:#999;margin-top:2px">扫一扫查询</div>
+            </div>
+          </div>
+        </div>
+        <div class="card-box">
           <h3 style="margin-bottom:12px">📋 最近学生</h3>
           <el-table :data="recentStudents" size="small">
             <el-table-column prop="studentNo" label="学号" width="100"></el-table-column>
@@ -384,6 +402,8 @@ new Vue({
     page: 'dashboard',
     today: new Date().toISOString().substring(0, 10),
     stats: { studentCount:0, classCount:0, dormitoryCount:0, courseCount:0, availableBeds:0, passRate:0 },
+    shareQueryUrl: window.location.origin + "/q",
+    shareQrUrl: "https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=" + encodeURIComponent(window.location.origin + "/q"),
     semesters: ['2024-2025-1','2024-2025-2','2025-2026-1','2025-2026-2'],
     classList: [], allStudents: [], allCourses: [], availableDorms: [],
     bedOptions: ['A床','B床','C床','D床','E床','F床','G床','H床'],
@@ -589,6 +609,25 @@ new Vue({
     },
 
     // ==== 数据导入导出 ====
+    copyShareUrl: function() {
+      var url = this.shareQueryUrl;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(function() { this.$message.success("查询链接已复制！"); }.bind(this)).catch(function() {
+          var ta = document.createElement("textarea");
+          ta.value = url; ta.style.position = "fixed"; ta.style.opacity = "0";
+          document.body.appendChild(ta); ta.select();
+          document.execCommand("copy"); document.body.removeChild(ta);
+          this.$message.success("查询链接已复制！");
+        }.bind(this));
+      } else {
+        var ta = document.createElement("textarea");
+        ta.value = url; ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select();
+        document.execCommand("copy"); document.body.removeChild(ta);
+        this.$message.success("查询链接已复制！");
+      }
+    },
+    openShareQuery: function() { window.open(this.shareQueryUrl, "_blank"); },
     exportData: function() {
       var self = this;
       api.get('/data/export').then(function(r) {

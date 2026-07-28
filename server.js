@@ -520,6 +520,67 @@ app.post('/api/data/import', (req, res) => {
   }
 });
 
+// ============ 公开查询/分享路由 ============
+app.get('/q', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'query.html'));
+});
+
+app.get('/s/:id', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'share.html'));
+});
+
+// 公开搜索 API：只返回在读学生的基本信息
+app.get('/api/public/search', (req, res) => {
+  const db = load();
+  let list = db.students.filter(s => s.status === '0');
+  const { q } = req.query;
+  if (q) {
+    const keyword = q.trim();
+    list = list.filter(s =>
+      s.studentNo.includes(keyword) ||
+      s.studentName.includes(keyword) ||
+      (s.phone && s.phone.includes(keyword))
+    );
+  }
+  list.sort((a, b) => b.studentId - a.studentId);
+  res.json({
+    rows: list.slice(0, 20).map(s => ({
+      studentId: s.studentId,
+      studentNo: s.studentNo,
+      studentName: s.studentName,
+      gender: s.gender,
+      className: s.className,
+      phone: s.phone,
+      enrollmentDate: s.enrollmentDate,
+      status: s.status
+    })),
+    total: list.length
+  });
+});
+
+// 公开学生详情 API：含成绩和住宿信息
+app.get('/api/public/student/:id', (req, res) => {
+  const db = load();
+  const student = db.students.find(s => s.studentId == req.params.id && s.status === '0');
+  if (!student) return res.json({ code: 404, msg: '学生不存在或已离校' });
+  if (student.classId) {
+    const c = db.classes.find(x => x.classId == student.classId);
+    student.className = c ? c.className : student.className || '';
+  }
+  const grades = db.grades
+    .filter(g => g.studentId == req.params.id)
+    .sort((a, b) => b.gradeId - a.gradeId);
+  const assignment = db.assignments.find(a => a.studentId == req.params.id && a.isCurrent === '1');
+  res.json({
+    code: 200,
+    data: {
+      student,
+      grades,
+      assignment: assignment || null
+    }
+  });
+});
+
 const PORT = process.env.PORT || 3456;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`========================================`);
