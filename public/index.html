@@ -125,7 +125,9 @@ body { font-family: 'Microsoft YaHei', sans-serif; background: #f0f2f5; color: #
       <div v-if="page==='grade'">
         <div class="card-box">
           <div class="toolbar">
-            <el-select v-model="gQuery.semester" placeholder="学期" size="small" style="width:140px" clearable @change="loadGrades"><el-option v-for="sem in semesters" :key="sem" :label="sem" :value="sem"></el-option></el-select>
+            <el-input v-model="gQuery.studentNo" placeholder="学号" size="small" style="width:110px" clearable @keyup.enter="loadGrades"></el-input>
+	            <el-input v-model="gQuery.studentName" placeholder="学生姓名" size="small" style="width:110px" clearable @keyup.enter="loadGrades"></el-input>
+	            <el-select v-model="gQuery.semester" placeholder="学期" size="small" style="width:140px" clearable @change="loadGrades"><el-option v-for="sem in semesters" :key="sem" :label="sem" :value="sem"></el-option></el-select>
             <el-select v-model="gQuery.examType" placeholder="类型" size="small" style="width:100px" clearable @change="loadGrades"><el-option label="期末" value="期末"></el-option><el-option label="期中" value="期中"></el-option><el-option label="补考" value="补考"></el-option><el-option label="重修" value="重修"></el-option></el-select>
             <el-select v-model="gQuery.isPassed" placeholder="通过" size="small" style="width:100px" clearable @change="loadGrades"><el-option label="通过" value="1"></el-option><el-option label="未通过" value="0"></el-option></el-select>
             <el-button type="primary" size="small" icon="el-icon-search" @click="loadGrades">搜索</el-button>
@@ -179,6 +181,7 @@ body { font-family: 'Microsoft YaHei', sans-serif; background: #f0f2f5; color: #
                 <el-table-column label="状态" width="80"><template slot-scope="s"><el-tag :type="s.row.status==='0'?'success':s.row.status==='1'?'warning':'danger'" size="small">{{s.row.status==='0'?'可用':s.row.status==='1'?'维修中':'已满'}}</el-tag></template></el-table-column>
                 <el-table-column label="操作" width="120"><template slot-scope="s"><el-button type="text" size="mini" @click="openDormDialog(s.row)">编辑</el-button><el-button type="text" size="mini" style="color:#f56c6c" @click="del('dormitory',s.row.dormitoryId)">删除</el-button></template></el-table-column>
               </el-table>
+              <el-pagination style="margin-top:12px;text-align:right" :current-page="dPage.pageNum" :page-sizes="[10,20,50]" :page-size="dPage.pageSize" :total="dPage.total" layout="total,sizes,prev,pager,next" @size-change="s=>{dPage.pageSize=s;loadDormitories()}" @current-change="s=>{dPage.pageNum=s;loadDormitories()}"></el-pagination>
             </div>
           </el-tab-pane>
           <el-tab-pane label="住宿分配" name="assign">
@@ -198,6 +201,7 @@ body { font-family: 'Microsoft YaHei', sans-serif; background: #f0f2f5; color: #
                 <el-table-column label="状态" width="80"><template slot-scope="s"><el-tag :type="s.row.isCurrent==='1'?'success':'info'" size="small">{{s.row.isCurrent==='1'?'在住':'已退宿'}}</el-tag></template></el-table-column>
                 <el-table-column label="操作" width="120"><template slot-scope="s"><el-button v-if="s.row.isCurrent==='1'" type="text" size="mini" style="color:#e6a23c" @click="checkoutAssign(s.row)">退宿</el-button><el-button type="text" size="mini" style="color:#f56c6c" @click="del('assignment',s.row.assignmentId)">删除</el-button></template></el-table-column>
               </el-table>
+              <el-pagination style="margin-top:12px;text-align:right" :current-page="aPage.pageNum" :page-sizes="[10,20,50]" :page-size="aPage.pageSize" :total="aPage.total" layout="total,sizes,prev,pager,next" @size-change="s=>{aPage.pageSize=s;loadAssignments()}" @current-change="s=>{aPage.pageNum=s;loadAssignments()}"></el-pagination>
             </div>
           </el-tab-pane>
         </el-tabs>
@@ -389,15 +393,15 @@ new Vue({
     sDialog:false, sForm:{},
     // Grade
     gList:[], gSelected:[], gPage:{pageNum:1,pageSize:10,total:0},
-    gQuery:{semester:'',examType:'',isPassed:''},
+    gQuery:{studentNo:'',studentName:'',semester:'',examType:'',isPassed:''},
     gDialog:false, gForm:{},
     gradeViewDialog:false, gradeViewStudent:{}, gradeViewList:[],
     // Dormitory
-    dTab:'dorm', dList:[], dSelected:[],
+    dTab:'dorm', dList:[], dSelected:[], dPage:{pageNum:1,pageSize:10,total:0},
     dQuery:{buildingName:'',roomType:'',status:''},
     dDialog:false, dForm:{},
     // Assignment
-    aList:[], aSelected:[], aDialog:false, aForm:{},
+    aList:[], aSelected:[], aPage:{pageNum:1,pageSize:10,total:0}, aDialog:false, aForm:{},
     // Class
     cList:[], cSelected:[], cPage:{pageNum:1,pageSize:10,total:0},
     cQuery:{className:'',major:''},
@@ -418,6 +422,16 @@ new Vue({
     api.get('/student/info/all').then(function(r){self.allStudents=r.data.data||[];});
     api.get('/student/course/all').then(function(r){self.allCourses=r.data.data||[];});
     api.get('/student/dormitory/available').then(function(r){self.availableDorms=r.data.data||[];});
+  },
+  watch: {
+    page: function(val) {
+      if (val === 'student') this.loadStudents();
+      else if (val === 'grade') this.loadGrades();
+      else if (val === 'dormitory') { this.loadDormitories(); this.loadAssignments(); }
+      else if (val === 'class') this.loadClasses();
+      else if (val === 'course') this.loadCourses();
+      else if (val === 'dashboard') this.loadDashboard();
+    }
   },
   methods: {
     levelTag: function(l) { return l==='优秀'?'success':l==='良好'?'':l==='中等'?'info':l==='及格'?'warning':'danger'; },
@@ -481,7 +495,7 @@ new Vue({
     // ==== Dormitory ====
     loadDormitories: function() {
       var self = this;
-      api.get('/student/dormitory/list',{params:Object.assign({pageNum:1,pageSize:100},this.dQuery)}).then(function(r){self.dList=r.data.rows||[];});
+      api.get('/student/dormitory/list',{params:Object.assign({},this.dPage,this.dQuery)}).then(function(r){self.dList=r.data.rows||[];self.dPage.total=r.data.total||0;});
     },
     openDormDialog: function(row) {
       var self = this;
@@ -502,7 +516,7 @@ new Vue({
     // ==== Assignment ====
     loadAssignments: function() {
       var self = this;
-      api.get('/student/dormitory/assignment/list',{params:{pageNum:1,pageSize:100}}).then(function(r){self.aList=r.data.rows||[];});
+      api.get('/student/dormitory/assignment/list',{params:Object.assign({},this.aPage)}).then(function(r){self.aList=r.data.rows||[];self.aPage.total=r.data.total||0;});
     },
     openAssignDialog: function() {
       this.aForm = {studentId:'',dormitoryId:'',bedNo:'',checkInDate:new Date().toISOString().substring(0,10)};

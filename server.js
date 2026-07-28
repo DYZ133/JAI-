@@ -198,7 +198,9 @@ app.delete('/api/student/info/:ids', (req, res) => {
 app.get('/api/student/grade/list', (req, res) => {
   const db = load();
   let list = [...db.grades];
-  const { studentId, courseId, semester, examType, isPassed } = req.query;
+  const { studentNo, studentName, studentId, courseId, semester, examType, isPassed } = req.query;
+  if (studentNo) list = list.filter(g => g.studentNo && g.studentNo.includes(studentNo));
+  if (studentName) list = list.filter(g => g.studentName && g.studentName.includes(studentName));
   if (studentId) list = list.filter(g => g.studentId == studentId);
   if (courseId) list = list.filter(g => g.courseId == courseId);
   if (semester) list = list.filter(g => g.semester === semester);
