@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学生信息管理系统</title>
+<link rel="stylesheet" href="/lib/element-ui/lib/theme-chalk/index.css">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Microsoft YaHei', sans-serif; background: #f0f2f5; color: #333; }
+.app-header { background: linear-gradient(135deg, #1890ff, #096dd9); color: #fff; padding: 0 24px; display: flex; align-items: center; height: 60px; box-shadow: 0 2px 8px rgba(0,0,0,.15); position: fixed; top: 0; left: 0; right: 0; z-index: 1000; }
+.app-header h1 { font-size: 20px; margin-left: 12px; }
+.app-body { display: flex; margin-top: 60px; min-height: calc(100vh - 60px); }
+.sidebar { width: 220px; background: #fff; box-shadow: 2px 0 8px rgba(0,0,0,.06); position: fixed; top: 60px; bottom: 0; overflow-y: auto; z-index: 999; }
+.sidebar .menu-item { padding: 14px 24px; cursor: pointer; display: flex; align-items: center; color: #555; transition: all .2s; border-left: 3px solid transparent; font-size: 14px; }
+.sidebar .menu-item:hover { background: #e6f7ff; color: #1890ff; }
+.sidebar .menu-item.active { background: #e6f7ff; color: #1890ff; border-left-color: #1890ff; font-weight: bold; }
+.sidebar .menu-group-title { padding: 16px 24px 8px; font-size: 12px; color: #999; letter-spacing: 1px; }
+.main-content { margin-left: 220px; flex: 1; padding: 24px; }
+.stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.stat-card { background: #fff; border-radius: 8px; padding: 20px; display: flex; align-items: center; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+.stat-card .icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-right: 16px; }
+.stat-card .info .num { font-size: 28px; font-weight: bold; }
+.stat-card .info .label { font-size: 13px; color: #999; margin-top: 2px; }
+.stat-card .icon.blue { background: #e6f7ff; color: #1890ff; }
+.stat-card .icon.green { background: #f6ffed; color: #52c41a; }
+.stat-card .icon.orange { background: #fff7e6; color: #fa8c16; }
+.stat-card .icon.purple { background: #f9f0ff; color: #722ed1; }
+.stat-card .icon.cyan { background: #e6fffb; color: #13c2c2; }
+.stat-card .icon.red { background: #fff1f0; color: #f5222d; }
+.card-box { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.06); margin-bottom: 16px; }
+.toolbar { margin-bottom: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="app-header">
+    <span style="font-size:28px">🎓</span>
+    <h1>学生信息管理系统</h1>
+    <div style="flex:1"></div>
+    <span style="font-size:13px;opacity:.85">{{ today }}</span>
+  </div>
+  <div class="app-body">
+    <div class="sidebar">
+      <div class="menu-group-title">主菜单</div>
+      <div class="menu-item" :class="{active: page==='dashboard'}" @click="page='dashboard'">📊 仪表盘</div>
+      <div class="menu-group-title">信息管理</div>
+      <div class="menu-item" :class="{active: page==='student'}" @click="page='student'">👨‍🎓 学生信息</div>
+      <div class="menu-item" :class="{active: page==='grade'}" @click="page='grade'">📝 成绩管理</div>
+      <div class="menu-item" :class="{active: page==='dormitory'}" @click="page='dormitory'">🏠 宿舍管理</div>
+      <div class="menu-item" :class="{active: page==='class'}" @click="page='class'">🏫 班级管理</div>
+      <div class="menu-item" :class="{active: page==='course'}" @click="page='course'">📚 课程管理</div>
+    </div>
+    <div class="main-content">
+
+      <!-- 仪表盘 -->
+      <div v-if="page==='dashboard'">
+        <div class="stat-cards">
+          <div class="stat-card"><div class="icon blue">👨‍🎓</div><div class="info"><div class="num">{{stats.studentCount}}</div><div class="label">在读学生</div></div></div>
+          <div class="stat-card"><div class="icon green">🏫</div><div class="info"><div class="num">{{stats.classCount}}</div><div class="label">班级数量</div></div></div>
+          <div class="stat-card"><div class="icon orange">🏠</div><div class="info"><div class="num">{{stats.dormitoryCount}}</div><div class="label">宿舍总数</div></div></div>
+          <div class="stat-card"><div class="icon purple">📚</div><div class="info"><div class="num">{{stats.courseCount}}</div><div class="label">课程总数</div></div></div>
+          <div class="stat-card"><div class="icon cyan">🛏️</div><div class="info"><div class="num">{{stats.availableBeds}}</div><div class="label">空余床位</div></div></div>
+          <div class="stat-card"><div class="icon red">📈</div><div class="info"><div class="num">{{stats.passRate}}%</div><div class="label">成绩通过率</div></div></div>
+        </div>
+        <div class="card-box">
+          <h3 style="margin-bottom:12px">💾 数据管理</h3>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <el-button size="small" type="primary" icon="el-icon-download" @click="exportData">导出数据备份</el-button>
+            <el-button size="small" type="warning" icon="el-icon-upload2" @click="$refs.importFile.click()">导入数据恢复</el-button>
+            <input type="file" ref="importFile" accept=".json" style="display:none" @change="importData">
+            <span style="font-size:12px;color:#999;line-height:32px;margin-left:8px">导出可备份全部数据，导入可恢复之前的数据。部署到云端后，重新部署会重置数据，建议提前导出备份。</span>
+          </div>
+        </div>
+        <div class="card-box">
+          <h3 style="margin-bottom:12px">📋 最近学生</h3>
+          <el-table :data="recentStudents" size="small">
+            <el-table-column prop="studentNo" label="学号" width="100"></el-table-column>
+            <el-table-column prop="studentName" label="姓名" width="80"></el-table-column>
+            <el-table-column label="性别" width="60"><template slot-scope="s">{{s.row.gender==='0'?'男':'女'}}</template></el-table-column>
+            <el-table-column prop="className" label="班级"></el-table-column>
+            <el-table-column prop="phone" label="手机号" width="120"></el-table-column>
+            <el-table-column label="状态" width="70"><template slot-scope="s"><el-tag :type="s.row.status==='0'?'success':'warning'" size="small">{{s.row.status==='0'?'在读':'休学'}}</el-tag></template></el-table-column>
+          </el-table>
+        </div>
+      </div>
+
+      <!-- 学生管理 -->
+      <div v-if="page==='student'">
+        <div class="card-box">
+          <div class="toolbar">
+            <el-input v-model="sQuery.studentNo" placeholder="学号" size="small" style="width:130px" clearable @keyup.enter="loadStudents"></el-input>
+            <el-input v-model="sQuery.studentName" placeholder="姓名" size="small" style="width:130px" clearable @keyup.enter="loadStudents"></el-input>
+            <el-select v-model="sQuery.gender" placeholder="性别" size="small" style="width:80px" clearable @change="loadStudents"><el-option label="男" value="0"></el-option><el-option label="女" value="1"></el-option></el-select>
+            <el-select v-model="sQuery.classId" placeholder="班级" size="small" style="width:150px" clearable @change="loadStudents"><el-option v-for="c in classList" :key="c.classId" :label="c.className" :value="c.classId"></el-option></el-select>
+            <el-select v-model="sQuery.status" placeholder="状态" size="small" style="width:90px" clearable @change="loadStudents"><el-option label="在读" value="0"></el-option><el-option label="休学" value="1"></el-option><el-option label="退学" value="2"></el-option><el-option label="毕业" value="3"></el-option></el-select>
+            <el-button type="primary" size="small" icon="el-icon-search" @click="loadStudents">搜索</el-button>
+            <el-button size="small" icon="el-icon-plus" @click="openStudentDialog()">新增</el-button>
+            <el-button size="small" type="danger" icon="el-icon-delete" :disabled="sSelected.length===0" @click="deleteSelected('student')">删除</el-button>
+          </div>
+          <el-table :data="sList" size="small" @selection-change="s=>sSelected=s">
+            <el-table-column type="selection" width="45"></el-table-column>
+            <el-table-column prop="studentNo" label="学号" width="100"></el-table-column>
+            <el-table-column prop="studentName" label="姓名" width="80"></el-table-column>
+            <el-table-column label="性别" width="60"><template slot-scope="s">{{s.row.gender==='0'?'男':'女'}}</template></el-table-column>
+            <el-table-column prop="className" label="班级"></el-table-column>
+            <el-table-column prop="phone" label="手机号" width="120"></el-table-column>
+            <el-table-column prop="nativePlace" label="籍贯" width="100"></el-table-column>
+            <el-table-column label="入学日期" width="100"><template slot-scope="s">{{s.row.enrollmentDate||'-'}}</template></el-table-column>
+            <el-table-column label="状态" width="70"><template slot-scope="s"><el-tag :type="s.row.status==='0'?'success':s.row.status==='1'?'warning':'danger'" size="small">{{s.row.status==='0'?'在读':s.row.status==='1'?'休学':s.row.status==='2'?'退学':'毕业'}}</el-tag></template></el-table-column>
+            <el-table-column label="操作" width="160">
+              <template slot-scope="s">
+                <el-button type="text" size="mini" @click="openStudentDialog(s.row)">编辑</el-button>
+                <el-button type="text" size="mini" @click="viewGrades(s.row)">成绩</el-button>
+                <el-button type="text" size="mini" style="color:#f56c6c" @click="del('student',s.row.studentId)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-pagination style="margin-top:12px;text-align:right" :current-page="sPage.pageNum" :page-sizes="[10,20,50]" :page-size="sPage.pageSize" :total="sPage.total" layout="total,sizes,prev,pager,next" @size-change="s=>{sPage.pageSize=s;loadStudents()}" @current-change="s=>{sPage.pageNum=s;loadStudents()}"></el-pagination>
+        </div>
+      </div>
+
+      <!-- 成绩管理 -->
+      <div v-if="page==='grade'">
+        <div class="card-box">
+          <div class="toolbar">
+            <el-select v-model="gQuery.semester" placeholder="学期" size="small" style="width:140px" clearable @change="loadGrades"><el-option v-for="sem in semesters" :key="sem" :label="sem" :value="sem"></el-option></el-select>
+            <el-select v-model="gQuery.examType" placeholder="类型" size="small" style="width:100px" clearable @change="loadGrades"><el-option label="期末" value="期末"></el-option><el-option label="期中" value="期中"></el-option><el-option label="补考" value="补考"></el-option><el-option label="重修" value="重修"></el-option></el-select>
+            <el-select v-model="gQuery.isPassed" placeholder="通过" size="small" style="width:100px" clearable @change="loadGrades"><el-option label="通过" value="1"></el-option><el-option label="未通过" value="0"></el-option></el-select>
+            <el-button type="primary" size="small" icon="el-icon-search" @click="loadGrades">搜索</el-button>
+            <el-button size="small" icon="el-icon-plus" @click="openGradeDialog()">新增</el-button>
+            <el-button size="small" type="danger" icon="el-icon-delete" :disabled="gSelected.length===0" @click="deleteSelected('grade')">删除</el-button>
+          </div>
+          <el-table :data="gList" size="small" @selection-change="s=>gSelected=s">
+            <el-table-column type="selection" width="45"></el-table-column>
+            <el-table-column prop="studentNo" label="学号" width="100"></el-table-column>
+            <el-table-column prop="studentName" label="姓名" width="80"></el-table-column>
+            <el-table-column prop="courseName" label="课程"></el-table-column>
+            <el-table-column prop="semester" label="学期" width="110"></el-table-column>
+            <el-table-column prop="examType" label="类型" width="60"></el-table-column>
+            <el-table-column prop="score" label="分数" width="70"></el-table-column>
+            <el-table-column prop="gradePoint" label="绩点" width="60"></el-table-column>
+            <el-table-column label="等级" width="70"><template slot-scope="s"><el-tag :type="levelTag(s.row.gradeLevel)" size="small">{{s.row.gradeLevel}}</el-tag></template></el-table-column>
+            <el-table-column label="通过" width="60"><template slot-scope="s"><span :style="{color:s.row.isPassed==='1'?'#52c41a':'#f5222d'}">{{s.row.isPassed==='1'?'是':'否'}}</span></template></el-table-column>
+            <el-table-column label="操作" width="120">
+              <template slot-scope="s">
+                <el-button type="text" size="mini" @click="openGradeDialog(s.row)">编辑</el-button>
+                <el-button type="text" size="mini" style="color:#f56c6c" @click="del('grade',s.row.gradeId)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-pagination style="margin-top:12px;text-align:right" :current-page="gPage.pageNum" :page-sizes="[10,20,50]" :page-size="gPage.pageSize" :total="gPage.total" layout="total,sizes,prev,pager,next" @size-change="s=>{gPage.pageSize=s;loadGrades()}" @current-change="s=>{gPage.pageNum=s;loadGrades()}"></el-pagination>
+        </div>
+      </div>
+
+      <!-- 宿舍管理 -->
+      <div v-if="page==='dormitory'">
+        <el-tabs v-model="dTab" type="card">
+          <el-tab-pane label="宿舍信息" name="dorm">
+            <div class="card-box">
+              <div class="toolbar">
+                <el-input v-model="dQuery.buildingName" placeholder="宿舍楼" size="small" style="width:140px" clearable @keyup.enter="loadDormitories"></el-input>
+                <el-select v-model="dQuery.roomType" placeholder="类型" size="small" style="width:100px" clearable @change="loadDormitories"><el-option label="四人间" value="四人间"></el-option><el-option label="六人间" value="六人间"></el-option></el-select>
+                <el-select v-model="dQuery.status" placeholder="状态" size="small" style="width:90px" clearable @change="loadDormitories"><el-option label="可用" value="0"></el-option><el-option label="维修中" value="1"></el-option><el-option label="已满" value="2"></el-option></el-select>
+                <el-button type="primary" size="small" icon="el-icon-search" @click="loadDormitories">搜索</el-button>
+                <el-button size="small" icon="el-icon-plus" @click="openDormDialog()">新增</el-button>
+                <el-button size="small" type="danger" icon="el-icon-delete" :disabled="dSelected.length===0" @click="deleteSelected('dormitory')">删除</el-button>
+              </div>
+              <el-table :data="dList" size="small" @selection-change="s=>dSelected=s">
+                <el-table-column type="selection" width="45"></el-table-column>
+                <el-table-column prop="buildingName" label="宿舍楼"></el-table-column>
+                <el-table-column prop="floor" label="楼层" width="60"></el-table-column>
+                <el-table-column prop="roomNo" label="房间号" width="70"></el-table-column>
+                <el-table-column prop="roomType" label="类型" width="80"></el-table-column>
+                <el-table-column label="入住" width="70"><template slot-scope="s">{{s.row.occupiedCount}}/{{s.row.bedCount}}</template></el-table-column>
+                <el-table-column prop="monthlyFee" label="月费(元)" width="80"></el-table-column>
+                <el-table-column label="设施" width="160"><template slot-scope="s"><el-tag size="mini" :type="s.row.hasBalcony==='1'?'success':'info'">阳台</el-tag><el-tag size="mini" :type="s.row.hasAircon==='1'?'success':'info'" style="margin-left:4px">空调</el-tag><el-tag size="mini" :type="s.row.hasWashroom==='1'?'success':'info'" style="margin-left:4px">独卫</el-tag></template></el-table-column>
+                <el-table-column label="状态" width="80"><template slot-scope="s"><el-tag :type="s.row.status==='0'?'success':s.row.status==='1'?'warning':'danger'" size="small">{{s.row.status==='0'?'可用':s.row.status==='1'?'维修中':'已满'}}</el-tag></template></el-table-column>
+                <el-table-column label="操作" width="120"><template slot-scope="s"><el-button type="text" size="mini" @click="openDormDialog(s.row)">编辑</el-button><el-button type="text" size="mini" style="color:#f56c6c" @click="del('dormitory',s.row.dormitoryId)">删除</el-button></template></el-table-column>
+              </el-table>
+            </div>
+          </el-tab-pane>
+          <el-tab-pane label="住宿分配" name="assign">
+            <div class="card-box">
+              <div class="toolbar">
+                <el-button size="small" type="primary" icon="el-icon-plus" @click="openAssignDialog()">分配宿舍</el-button>
+                <el-button size="small" type="danger" icon="el-icon-delete" :disabled="aSelected.length===0" @click="deleteSelected('assignment')">删除</el-button>
+              </div>
+              <el-table :data="aList" size="small" @selection-change="s=>aSelected=s">
+                <el-table-column type="selection" width="45"></el-table-column>
+                <el-table-column prop="studentNo" label="学号" width="100"></el-table-column>
+                <el-table-column prop="studentName" label="姓名" width="80"></el-table-column>
+                <el-table-column prop="buildingName" label="宿舍楼"></el-table-column>
+                <el-table-column prop="roomNo" label="房间号" width="70"></el-table-column>
+                <el-table-column prop="bedNo" label="床位" width="70"></el-table-column>
+                <el-table-column prop="checkInDate" label="入住日期" width="100"></el-table-column>
+                <el-table-column label="状态" width="80"><template slot-scope="s"><el-tag :type="s.row.isCurrent==='1'?'success':'info'" size="small">{{s.row.isCurrent==='1'?'在住':'已退宿'}}</el-tag></template></el-table-column>
+                <el-table-column label="操作" width="120"><template slot-scope="s"><el-button v-if="s.row.isCurrent==='1'" type="text" size="mini" style="color:#e6a23c" @click="checkoutAssign(s.row)">退宿</el-button><el-button type="text" size="mini" style="color:#f56c6c" @click="del('assignment',s.row.assignmentId)">删除</el-button></template></el-table-column>
+              </el-table>
+            </div>
+          </el-tab-pane>
+        </el-tabs>
+      </div>
+
+      <!-- 班级管理 -->
+      <div v-if="page==='class'">
+        <div class="card-box">
+          <div class="toolbar">
+            <el-input v-model="cQuery.className" placeholder="班级名称" size="small" style="width:140px" clearable @keyup.enter="loadClasses"></el-input>
+            <el-input v-model="cQuery.major" placeholder="专业" size="small" style="width:130px" clearable @keyup.enter="loadClasses"></el-input>
+            <el-button type="primary" size="small" icon="el-icon-search" @click="loadClasses">搜索</el-button>
+            <el-button size="small" icon="el-icon-plus" @click="openClassDialog()">新增</el-button>
+            <el-button size="small" type="danger" icon="el-icon-delete" :disabled="cSelected.length===0" @click="deleteSelected('class')">删除</el-button>
+          </div>
+          <el-table :data="cList" size="small" @selection-change="s=>cSelected=s">
+            <el-table-column type="selection" width="45"></el-table-column>
+            <el-table-column prop="className" label="班级名称"></el-table-column>
+            <el-table-column prop="grade" label="年级" width="80"></el-table-column>
+            <el-table-column prop="major" label="专业"></el-table-column>
+            <el-table-column prop="department" label="院系"></el-table-column>
+            <el-table-column prop="classTeacher" label="班主任" width="80"></el-table-column>
+            <el-table-column prop="studentCount" label="人数" width="60"></el-table-column>
+            <el-table-column label="状态" width="70"><template slot-scope="s"><el-tag :type="s.row.status==='0'?'success':'danger'" size="small">{{s.row.status==='0'?'正常':'停用'}}</el-tag></template></el-table-column>
+            <el-table-column label="操作" width="120"><template slot-scope="s"><el-button type="text" size="mini" @click="openClassDialog(s.row)">编辑</el-button><el-button type="text" size="mini" style="color:#f56c6c" @click="del('class',s.row.classId)">删除</el-button></template></el-table-column>
+          </el-table>
+          <el-pagination style="margin-top:12px;text-align:right" :current-page="cPage.pageNum" :page-sizes="[10,20,50]" :page-size="cPage.pageSize" :total="cPage.total" layout="total,sizes,prev,pager,next" @size-change="s=>{cPage.pageSize=s;loadClasses()}" @current-change="s=>{cPage.pageNum=s;loadClasses()}"></el-pagination>
+        </div>
+      </div>
+
+      <!-- 课程管理 -->
+      <div v-if="page==='course'">
+        <div class="card-box">
+          <div class="toolbar">
+            <el-input v-model="coQuery.courseName" placeholder="课程名称" size="small" style="width:140px" clearable @keyup.enter="loadCourses"></el-input>
+            <el-select v-model="coQuery.courseType" placeholder="类型" size="small" style="width:90px" clearable @change="loadCourses"><el-option label="必修" value="必修"></el-option><el-option label="选修" value="选修"></el-option></el-select>
+            <el-input v-model="coQuery.teacher" placeholder="教师" size="small" style="width:110px" clearable @keyup.enter="loadCourses"></el-input>
+            <el-button type="primary" size="small" icon="el-icon-search" @click="loadCourses">搜索</el-button>
+            <el-button size="small" icon="el-icon-plus" @click="openCourseDialog()">新增</el-button>
+            <el-button size="small" type="danger" icon="el-icon-delete" :disabled="coSelected.length===0" @click="deleteSelected('course')">删除</el-button>
+          </div>
+          <el-table :data="coList" size="small" @selection-change="s=>coSelected=s">
+            <el-table-column type="selection" width="45"></el-table-column>
+            <el-table-column prop="courseCode" label="编码" width="90"></el-table-column>
+            <el-table-column prop="courseName" label="课程名称"></el-table-column>
+            <el-table-column prop="credit" label="学分" width="60"></el-table-column>
+            <el-table-column label="类型" width="70"><template slot-scope="s"><el-tag :type="s.row.courseType==='必修'?'danger':'primary'" size="small">{{s.row.courseType}}</el-tag></template></el-table-column>
+            <el-table-column prop="teacher" label="教师" width="80"></el-table-column>
+            <el-table-column prop="semester" label="学期" width="110"></el-table-column>
+            <el-table-column prop="classHour" label="课时" width="60"></el-table-column>
+            <el-table-column prop="examType" label="考核" width="60"></el-table-column>
+            <el-table-column label="状态" width="70"><template slot-scope="s"><el-tag :type="s.row.status==='0'?'success':'danger'" size="small">{{s.row.status==='0'?'正常':'停用'}}</el-tag></template></el-table-column>
+            <el-table-column label="操作" width="120"><template slot-scope="s"><el-button type="text" size="mini" @click="openCourseDialog(s.row)">编辑</el-button><el-button type="text" size="mini" style="color:#f56c6c" @click="del('course',s.row.courseId)">删除</el-button></template></el-table-column>
+          </el-table>
+          <el-pagination style="margin-top:12px;text-align:right" :current-page="coPage.pageNum" :page-sizes="[10,20,50]" :page-size="coPage.pageSize" :total="coPage.total" layout="total,sizes,prev,pager,next" @size-change="s=>{coPage.pageSize=s;loadCourses()}" @current-change="s=>{coPage.pageNum=s;loadCourses()}"></el-pagination>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==== 弹窗 ==== -->
+  <!-- 学生弹窗 -->
+  <el-dialog :title="sForm.studentId?'修改学生':'新增学生'" :visible.sync="sDialog" width="700px"><el-form :model="sForm" label-width="100px" size="small">
+    <el-row :gutter="14">
+      <el-col :span="12"><el-form-item label="学号"><el-input v-model="sForm.studentNo" placeholder="必填"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="姓名"><el-input v-model="sForm.studentName" placeholder="必填"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="性别"><el-select v-model="sForm.gender" style="width:100%"><el-option label="男" value="0"></el-option><el-option label="女" value="1"></el-option></el-select></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="出生日期"><el-input v-model="sForm.birthDate" type="date"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="班级"><el-select v-model="sForm.classId" style="width:100%"><el-option v-for="c in classList" :key="c.classId" :label="c.className" :value="c.classId"></el-option></el-select></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="手机号"><el-input v-model="sForm.phone"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="邮箱"><el-input v-model="sForm.email"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="身份证号"><el-input v-model="sForm.idCard"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="籍贯"><el-input v-model="sForm.nativePlace"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="民族"><el-input v-model="sForm.nation"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="政治面貌"><el-input v-model="sForm.politicalStatus"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="入学日期"><el-input v-model="sForm.enrollmentDate" type="date"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="毕业日期"><el-input v-model="sForm.graduationDate" type="date"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="状态"><el-select v-model="sForm.status" style="width:100%"><el-option label="在读" value="0"></el-option><el-option label="休学" value="1"></el-option><el-option label="退学" value="2"></el-option><el-option label="毕业" value="3"></el-option></el-select></el-form-item></el-col>
+    </el-row>
+    <el-form-item label="备注"><el-input v-model="sForm.remark" type="textarea"></el-input></el-form-item>
+  </el-form><div slot="footer"><el-button @click="sDialog=false">取消</el-button><el-button type="primary" @click="saveStudent">确定</el-button></div></el-dialog>
+
+  <!-- 成绩弹窗 -->
+  <el-dialog :title="gForm.gradeId?'修改成绩':'新增成绩'" :visible.sync="gDialog" width="500px"><el-form :model="gForm" label-width="90px" size="small">
+    <el-form-item label="学生"><el-select v-model="gForm.studentId" filterable placeholder="选择学生" style="width:100%"><el-option v-for="s in allStudents" :key="s.studentId" :label="s.studentName+' ('+s.studentNo+')'" :value="s.studentId"></el-option></el-select></el-form-item>
+    <el-form-item label="课程"><el-select v-model="gForm.courseId" filterable placeholder="选择课程" style="width:100%"><el-option v-for="c in allCourses" :key="c.courseId" :label="c.courseName" :value="c.courseId"></el-option></el-select></el-form-item>
+    <el-form-item label="分数"><el-input-number v-model="gForm.score" :min="0" :max="100" :precision="1"></el-input-number></el-form-item>
+    <el-form-item label="学期"><el-select v-model="gForm.semester" style="width:100%"><el-option v-for="sem in semesters" :key="sem" :label="sem" :value="sem"></el-option></el-select></el-form-item>
+    <el-form-item label="考试类型"><el-select v-model="gForm.examType" style="width:100%"><el-option label="期末" value="期末"></el-option><el-option label="期中" value="期中"></el-option><el-option label="补考" value="补考"></el-option><el-option label="重修" value="重修"></el-option></el-select></el-form-item>
+    <el-form-item label="补考成绩"><el-input-number v-model="gForm.makeupScore" :min="0" :max="100" :precision="1"></el-input-number></el-form-item>
+    <el-form-item label="备注"><el-input v-model="gForm.remark" type="textarea"></el-input></el-form-item>
+  </el-form><div slot="footer"><el-button @click="gDialog=false">取消</el-button><el-button type="primary" @click="saveGrade">确定</el-button></div></el-dialog>
+
+  <!-- 宿舍弹窗 -->
+  <el-dialog :title="dForm.dormitoryId?'修改宿舍':'新增宿舍'" :visible.sync="dDialog" width="550px"><el-form :model="dForm" label-width="110px" size="small">
+    <el-row :gutter="14">
+      <el-col :span="12"><el-form-item label="宿舍楼"><el-input v-model="dForm.buildingName"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="楼层"><el-input-number v-model="dForm.floor" :min="1"></el-input-number></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="房间号"><el-input v-model="dForm.roomNo"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="类型"><el-select v-model="dForm.roomType" style="width:100%"><el-option label="四人间" value="四人间"></el-option><el-option label="六人间" value="六人间"></el-option><el-option label="八人间" value="八人间"></el-option></el-select></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="床位数"><el-input-number v-model="dForm.bedCount" :min="1" :max="10"></el-input-number></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="月费(元)"><el-input-number v-model="dForm.monthlyFee" :min="0" :precision="2"></el-input-number></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="状态"><el-select v-model="dForm.status" style="width:100%"><el-option label="可用" value="0"></el-option><el-option label="维修中" value="1"></el-option></el-select></el-form-item></el-col>
+    </el-row>
+    <el-form-item label="设施">
+      <el-switch v-model="dForm.hasBalcony" active-value="1" inactive-value="0" active-text="阳台"></el-switch>
+      <el-switch v-model="dForm.hasAircon" active-value="1" inactive-value="0" active-text="空调" style="margin-left:12px"></el-switch>
+      <el-switch v-model="dForm.hasWashroom" active-value="1" inactive-value="0" active-text="独卫" style="margin-left:12px"></el-switch>
+    </el-form-item>
+    <el-form-item label="备注"><el-input v-model="dForm.remark" type="textarea"></el-input></el-form-item>
+  </el-form><div slot="footer"><el-button @click="dDialog=false">取消</el-button><el-button type="primary" @click="saveDormitory">确定</el-button></div></el-dialog>
+
+  <!-- 分配弹窗 -->
+  <el-dialog title="分配宿舍" :visible.sync="aDialog" width="480px"><el-form :model="aForm" label-width="90px" size="small">
+    <el-form-item label="学生"><el-select v-model="aForm.studentId" filterable placeholder="选择学生" style="width:100%"><el-option v-for="s in allStudents" :key="s.studentId" :label="s.studentName+' ('+s.studentNo+')'" :value="s.studentId"></el-option></el-select></el-form-item>
+    <el-form-item label="宿舍"><el-select v-model="aForm.dormitoryId" placeholder="选择宿舍" style="width:100%" @change="onDormChange"><el-option v-for="d in availableDorms" :key="d.dormitoryId" :label="d.buildingName+' '+d.roomNo+' ('+d.occupiedCount+'/'+d.bedCount+')'" :value="d.dormitoryId"></el-option></el-select></el-form-item>
+    <el-form-item label="床位"><el-select v-model="aForm.bedNo" placeholder="选择床位" style="width:100%"><el-option v-for="b in bedOptions" :key="b" :label="b" :value="b"></el-option></el-select></el-form-item>
+    <el-form-item label="入住日期"><el-input v-model="aForm.checkInDate" type="date"></el-input></el-form-item>
+  </el-form><div slot="footer"><el-button @click="aDialog=false">取消</el-button><el-button type="primary" @click="saveAssignment">确定</el-button></div></el-dialog>
+
+  <!-- 班级弹窗 -->
+  <el-dialog :title="cForm.classId?'修改班级':'新增班级'" :visible.sync="cDialog" width="500px"><el-form :model="cForm" label-width="100px" size="small">
+    <el-row :gutter="14">
+      <el-col :span="12"><el-form-item label="班级名称"><el-input v-model="cForm.className"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="年级"><el-input v-model="cForm.grade"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="专业"><el-input v-model="cForm.major"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="院系"><el-input v-model="cForm.department"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="班主任"><el-input v-model="cForm.classTeacher"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="状态"><el-select v-model="cForm.status" style="width:100%"><el-option label="正常" value="0"></el-option><el-option label="停用" value="1"></el-option></el-select></el-form-item></el-col>
+    </el-row>
+    <el-form-item label="备注"><el-input v-model="cForm.remark" type="textarea"></el-input></el-form-item>
+  </el-form><div slot="footer"><el-button @click="cDialog=false">取消</el-button><el-button type="primary" @click="saveClass">确定</el-button></div></el-dialog>
+
+  <!-- 课程弹窗 -->
+  <el-dialog :title="coForm.courseId?'修改课程':'新增课程'" :visible.sync="coDialog" width="500px"><el-form :model="coForm" label-width="100px" size="small">
+    <el-row :gutter="14">
+      <el-col :span="12"><el-form-item label="课程名称"><el-input v-model="coForm.courseName"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="课程编码"><el-input v-model="coForm.courseCode"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="学分"><el-input-number v-model="coForm.credit" :min="0" :max="20" :precision="1"></el-input-number></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="类型"><el-select v-model="coForm.courseType" style="width:100%"><el-option label="必修" value="必修"></el-option><el-option label="选修" value="选修"></el-option><el-option label="公选" value="公选"></el-option></el-select></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="教师"><el-input v-model="coForm.teacher"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="学期"><el-select v-model="coForm.semester" style="width:100%"><el-option v-for="sem in semesters" :key="sem" :label="sem" :value="sem"></el-option></el-select></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="课时"><el-input-number v-model="coForm.classHour" :min="1"></el-input-number></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="考核"><el-select v-model="coForm.examType" style="width:100%"><el-option label="考试" value="考试"></el-option><el-option label="考查" value="考查"></el-option></el-select></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="状态"><el-select v-model="coForm.status" style="width:100%"><el-option label="正常" value="0"></el-option><el-option label="停用" value="1"></el-option></el-select></el-form-item></el-col>
+    </el-row>
+    <el-form-item label="备注"><el-input v-model="coForm.remark" type="textarea"></el-input></el-form-item>
+  </el-form><div slot="footer"><el-button @click="coDialog=false">取消</el-button><el-button type="primary" @click="saveCourse">确定</el-button></div></el-dialog>
+
+  <!-- 成绩查看弹窗 -->
+  <el-dialog :title="gradeViewStudent.studentName+' 的成绩单'" :visible.sync="gradeViewDialog" width="800px">
+    <el-table :data="gradeViewList" size="small"><el-table-column prop="courseName" label="课程"></el-table-column><el-table-column prop="score" label="分数" width="70"></el-table-column><el-table-column prop="gradePoint" label="绩点" width="60"></el-table-column><el-table-column label="等级" width="70"><template slot-scope="s"><el-tag :type="levelTag(s.row.gradeLevel)" size="small">{{s.row.gradeLevel}}</el-tag></template></el-table-column><el-table-column prop="semester" label="学期" width="110"></el-table-column><el-table-column prop="examType" label="类型" width="60"></el-table-column><el-table-column label="通过" width="60"><template slot-scope="s"><span :style="{color:s.row.isPassed==='1'?'#52c41a':'#f5222d'}">{{s.row.isPassed==='1'?'是':'否'}}</span></template></el-table-column></el-table>
+    <div slot="footer"><el-button @click="gradeViewDialog=false">关闭</el-button></div>
+  </el-dialog>
+</div>
+
+<script src="/lib/vue/dist/vue.js"></script>
+<script src="/lib/element-ui/lib/index.js"></script>
+<script src="/lib/axios/dist/axios.min.js"></script>
+<script>
+var api = axios.create({ baseURL: '/api' });
+
+function calcGrade(score) {
+  if (score >= 90) return { gradeLevel: '优秀', gradePoint: 4.0 };
+  if (score >= 80) return { gradeLevel: '良好', gradePoint: 3.0 };
+  if (score >= 70) return { gradeLevel: '中等', gradePoint: 2.0 };
+  if (score >= 60) return { gradeLevel: '及格', gradePoint: 1.0 };
+  return { gradeLevel: '不及格', gradePoint: 0.0 };
+}
+
+function paginate(list, pageNum, pageSize) {
+  pageNum = pageNum || 1; pageSize = pageSize || 10;
+  return { rows: list.slice((pageNum-1)*pageSize, pageNum*pageSize), total: list.length };
+}
+
+new Vue({
+  el: '#app',
+  data: {
+    page: 'dashboard',
+    today: new Date().toISOString().substring(0, 10),
+    stats: { studentCount:0, classCount:0, dormitoryCount:0, courseCount:0, availableBeds:0, passRate:0 },
+    semesters: ['2024-2025-1','2024-2025-2','2025-2026-1','2025-2026-2'],
+    classList: [], allStudents: [], allCourses: [], availableDorms: [],
+    bedOptions: ['A床','B床','C床','D床','E床','F床','G床','H床'],
+    // Student
+    sList:[], sSelected:[], sPage:{pageNum:1,pageSize:10,total:0},
+    sQuery:{studentNo:'',studentName:'',gender:'',classId:'',status:''},
+    sDialog:false, sForm:{},
+    // Grade
+    gList:[], gSelected:[], gPage:{pageNum:1,pageSize:10,total:0},
+    gQuery:{semester:'',examType:'',isPassed:''},
+    gDialog:false, gForm:{},
+    gradeViewDialog:false, gradeViewStudent:{}, gradeViewList:[],
+    // Dormitory
+    dTab:'dorm', dList:[], dSelected:[],
+    dQuery:{buildingName:'',roomType:'',status:''},
+    dDialog:false, dForm:{},
+    // Assignment
+    aList:[], aSelected:[], aDialog:false, aForm:{},
+    // Class
+    cList:[], cSelected:[], cPage:{pageNum:1,pageSize:10,total:0},
+    cQuery:{className:'',major:''},
+    cDialog:false, cForm:{},
+    // Course
+    coList:[], coSelected:[], coPage:{pageNum:1,pageSize:10,total:0},
+    coQuery:{courseName:'',courseType:'',teacher:''},
+    coDialog:false, coForm:{}
+  },
+  computed: {
+    recentStudents: function() { return this.sList.slice(0, 5); }
+  },
+  mounted: function() {
+    var self = this;
+    this.loadDashboard();
+    api.get('/student/info/list',{params:{pageNum:1,pageSize:1000}}).then(function(r){self.sList=r.data.rows||[];});
+    api.get('/student/class/all').then(function(r){self.classList=r.data.data||[];});
+    api.get('/student/info/all').then(function(r){self.allStudents=r.data.data||[];});
+    api.get('/student/course/all').then(function(r){self.allCourses=r.data.data||[];});
+    api.get('/student/dormitory/available').then(function(r){self.availableDorms=r.data.data||[];});
+  },
+  methods: {
+    levelTag: function(l) { return l==='优秀'?'success':l==='良好'?'':l==='中等'?'info':l==='及格'?'warning':'danger'; },
+
+    loadDashboard: function() {
+      var self = this;
+      api.get('/dashboard/stats').then(function(r){ self.stats = r.data; });
+    },
+
+    // ==== Student ====
+    loadStudents: function() {
+      var self = this;
+      api.get('/student/info/list',{params:Object.assign({},this.sPage,this.sQuery)}).then(function(r){
+        self.sList = r.data.rows || []; self.sPage.total = r.data.total || 0;
+      });
+    },
+    openStudentDialog: function(row) {
+      var self = this;
+      if (row) {
+        api.get('/student/info/'+row.studentId).then(function(r){self.sForm=Object.assign({},r.data.data);self.sDialog=true;});
+      } else {
+        this.sForm = {studentNo:'',studentName:'',gender:'0',birthDate:'',classId:'',phone:'',email:'',idCard:'',nativePlace:'',nation:'',politicalStatus:'',enrollmentDate:'',graduationDate:'',status:'0',remark:''};
+        this.sDialog = true;
+      }
+    },
+    saveStudent: function() {
+      var self = this;
+      if (!this.sForm.studentNo || !this.sForm.studentName) { this.$message.warning('学号和姓名必填'); return; }
+      var req = this.sForm.studentId ? api.put('/student/info',this.sForm) : api.post('/student/info',this.sForm);
+      req.then(function(r){if(r.data.code===200){self.$message.success('成功');self.sDialog=false;self.loadStudents();self.loadDashboard();}else{self.$message.error(r.data.msg);}});
+    },
+
+    // ==== Grade ====
+    loadGrades: function() {
+      var self = this;
+      api.get('/student/grade/list',{params:Object.assign({},this.gPage,this.gQuery)}).then(function(r){
+        self.gList = r.data.rows || []; self.gPage.total = r.data.total || 0;
+      });
+    },
+    openGradeDialog: function(row) {
+      var self = this;
+      if (row) {
+        api.get('/student/grade/'+row.gradeId).then(function(r){self.gForm=Object.assign({},r.data.data);self.gDialog=true;});
+      } else {
+        this.gForm = {studentId:'',courseId:'',score:undefined,semester:'2024-2025-1',examType:'期末',makeupScore:undefined,remark:''};
+        this.gDialog = true;
+      }
+    },
+    saveGrade: function() {
+      var self = this;
+      if (!this.gForm.studentId || !this.gForm.courseId || this.gForm.score===undefined) { this.$message.warning('请完整填写'); return; }
+      var req = this.gForm.gradeId ? api.put('/student/grade',this.gForm) : api.post('/student/grade',this.gForm);
+      req.then(function(r){if(r.data.code===200){self.$message.success('成功');self.gDialog=false;self.loadGrades();self.loadDashboard();}else{self.$message.error(r.data.msg);}});
+    },
+    viewGrades: function(row) {
+      var self = this;
+      this.gradeViewStudent = row;
+      api.get('/student/grade/student/'+row.studentId).then(function(r){self.gradeViewList=r.data.data||[];self.gradeViewDialog=true;});
+    },
+
+    // ==== Dormitory ====
+    loadDormitories: function() {
+      var self = this;
+      api.get('/student/dormitory/list',{params:Object.assign({pageNum:1,pageSize:100},this.dQuery)}).then(function(r){self.dList=r.data.rows||[];});
+    },
+    openDormDialog: function(row) {
+      var self = this;
+      if (row) {
+        api.get('/student/dormitory/'+row.dormitoryId).then(function(r){self.dForm=Object.assign({},r.data.data);self.dDialog=true;});
+      } else {
+        this.dForm = {buildingName:'',floor:1,roomNo:'',bedCount:4,roomType:'四人间',hasBalcony:'1',hasAircon:'1',hasWashroom:'1',monthlyFee:800,status:'0',remark:''};
+        this.dDialog = true;
+      }
+    },
+    saveDormitory: function() {
+      var self = this;
+      if (!this.dForm.buildingName || !this.dForm.roomNo) { this.$message.warning('请填写完整'); return; }
+      var req = this.dForm.dormitoryId ? api.put('/student/dormitory',this.dForm) : api.post('/student/dormitory',this.dForm);
+      req.then(function(r){if(r.data.code===200){self.$message.success('成功');self.dDialog=false;self.loadDormitories();}else{self.$message.error(r.data.msg);}});
+    },
+
+    // ==== Assignment ====
+    loadAssignments: function() {
+      var self = this;
+      api.get('/student/dormitory/assignment/list',{params:{pageNum:1,pageSize:100}}).then(function(r){self.aList=r.data.rows||[];});
+    },
+    openAssignDialog: function() {
+      this.aForm = {studentId:'',dormitoryId:'',bedNo:'',checkInDate:new Date().toISOString().substring(0,10)};
+      this.aDialog = true;
+    },
+    onDormChange: function(did) {
+      var d = this.availableDorms.find(function(x){return x.dormitoryId===did;});
+      if (d) this.bedOptions = Array.from({length:d.bedCount},function(_,i){return String.fromCharCode(65+i)+'床';});
+    },
+    saveAssignment: function() {
+      var self = this;
+      if (!this.aForm.studentId || !this.aForm.dormitoryId || !this.aForm.bedNo) { this.$message.warning('请完整填写'); return; }
+      api.post('/student/dormitory/assignment',this.aForm).then(function(r){
+        if(r.data.code===200){self.$message.success('分配成功');self.aDialog=false;self.loadAssignments();self.loadDormitories();}
+        else self.$message.error(r.data.msg);
+      });
+    },
+    checkoutAssign: function(row) {
+      var self = this;
+      this.$confirm('确认退宿？').then(function(){return api.put('/student/dormitory/assignment/checkout/'+row.assignmentId);}).then(function(){self.$message.success('退宿成功');self.loadAssignments();self.loadDormitories();}).catch(function(){});
+    },
+
+    // ==== Class ====
+    loadClasses: function() {
+      var self = this;
+      api.get('/student/class/list',{params:Object.assign({},this.cPage,this.cQuery)}).then(function(r){self.cList=r.data.rows||[];self.cPage.total=r.data.total||0;});
+    },
+    openClassDialog: function(row) {
+      var self = this;
+      if (row) { api.get('/student/class/'+row.classId).then(function(r){self.cForm=Object.assign({},r.data.data);self.cDialog=true;}); }
+      else { this.cForm = {className:'',grade:'',major:'',department:'',classTeacher:'',status:'0',remark:''}; this.cDialog = true; }
+    },
+    saveClass: function() {
+      var self = this;
+      if (!this.cForm.className) { this.$message.warning('请填写班级名称'); return; }
+      var req = this.cForm.classId ? api.put('/student/class',this.cForm) : api.post('/student/class',this.cForm);
+      req.then(function(r){if(r.data.code===200){self.$message.success('成功');self.cDialog=false;self.loadClasses();}else{self.$message.error(r.data.msg);}});
+    },
+
+    // ==== Course ====
+    loadCourses: function() {
+      var self = this;
+      api.get('/student/course/list',{params:Object.assign({},this.coPage,this.coQuery)}).then(function(r){self.coList=r.data.rows||[];self.coPage.total=r.data.total||0;});
+    },
+    openCourseDialog: function(row) {
+      var self = this;
+      if (row) { api.get('/student/course/'+row.courseId).then(function(r){self.coForm=Object.assign({},r.data.data);self.coDialog=true;}); }
+      else { this.coForm = {courseName:'',courseCode:'',credit:undefined,courseType:'必修',teacher:'',semester:'',classHour:undefined,examType:'考试',status:'0',remark:''}; this.coDialog = true; }
+    },
+    saveCourse: function() {
+      var self = this;
+      if (!this.coForm.courseName || !this.coForm.courseCode) { this.$message.warning('请填写完整'); return; }
+      var req = this.coForm.courseId ? api.put('/student/course',this.coForm) : api.post('/student/course',this.coForm);
+      req.then(function(r){if(r.data.code===200){self.$message.success('成功');self.coDialog=false;self.loadCourses();}else{self.$message.error(r.data.msg);}});
+    },
+
+    // ==== 通用 ====
+    del: function(type, id) {
+      var self = this;
+      var urls = {student:'/student/info/',grade:'/student/grade/',dormitory:'/student/dormitory/',assignment:'/student/dormitory/assignment/',class:'/student/class/',course:'/student/course/'};
+      this.$confirm('确认删除？').then(function(){return api.delete(urls[type]+id);}).then(function(){self.$message.success('删除成功');
+        if(type==='student'){self.loadStudents();self.loadDashboard();}else if(type==='grade'){self.loadGrades();self.loadDashboard();}else if(type==='dormitory')self.loadDormitories();else if(type==='assignment')self.loadAssignments();else if(type==='class')self.loadClasses();else if(type==='course')self.loadCourses();
+      }).catch(function(){});
+    },
+    deleteSelected: function(type) {
+      var map = {student:['sSelected','studentId'],grade:['gSelected','gradeId'],dormitory:['dSelected','dormitoryId'],assignment:['aSelected','assignmentId'],class:['cSelected','classId'],course:['coSelected','courseId']};
+      var ids = this[map[type][0]].map(function(s){return s[map[type][1]];}).join(',');
+      if (!ids) return;
+      this.del(type, ids);
+    },
+
+    // ==== 数据导入导出 ====
+    exportData: function() {
+      var self = this;
+      api.get('/data/export').then(function(r) {
+        var blob = new Blob([JSON.stringify(r.data, null, 2)], {type: 'application/json'});
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'data-backup-' + new Date().toISOString().substring(0,10) + '.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        self.$message.success('数据已导出');
+      }).catch(function() {
+        self.$message.error('导出失败');
+      });
+    },
+    importData: function(e) {
+      var self = this;
+      var file = e.target.files[0];
+      if (!file) return;
+      this.$confirm('导入数据将覆盖当前所有数据，确认继续？', '警告', {confirmButtonText:'确认导入',cancelButtonText:'取消',type:'warning'}).then(function() {
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+          try {
+            var data = JSON.parse(ev.target.result);
+            api.post('/data/import', data).then(function(r) {
+              if (r.data.code === 200) {
+                self.$message.success('数据已导入，页面即将刷新');
+                setTimeout(function() { location.reload(); }, 1500);
+              } else {
+                self.$message.error(r.data.msg);
+              }
+            }).catch(function() {
+              self.$message.error('导入失败');
+            });
+          } catch (err) {
+            self.$message.error('JSON 格式解析失败，请检查文件');
+          }
+        };
+        reader.readAsText(file);
+      }).catch(function() {});
+      // 清空 input 以便重复选择同一文件
+      e.target.value = '';
+    }
+  }
+});
+</script>
+</body>
+</html>
