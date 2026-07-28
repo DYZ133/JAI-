@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 
 const app = express();
 app.use(cors());
@@ -21,13 +23,47 @@ function load() {
       assignments: [],
       classes: [],
       courses: [],
-      nextId: { student: 1, grade: 1, dormitory: 1, assignment: 1, class: 1, course: 1 }
+      users: [],
+      sessions: {},
+      nextId: { student: 1, grade: 1, dormitory: 1, assignment: 1, class: 1, course: 1, user: 1 }
     };
     seed(init);
     fs.writeFileSync(DB_FILE, JSON.stringify(init, null, 2));
     return init;
   }
-  return JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
+  const db = JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
+  // 数据迁移：确保新字段存在
+  let migrated = false;
+  if (!db.users) { db.users = []; migrated = true; }
+  if (!db.sessions) { db.sessions = {}; migrated = true; }
+  if (!db.nextId.user) { db.nextId.user = db.users.length + 1; migrated = true; }
+  if (db.users.length === 0) {
+    db.users.push({
+      userId: nextId(db, 'user'),
+      username: 'admin',
+      password: bcrypt.hashSync('admin123', 10),
+      role: 'teacher',
+      displayName: '管理员',
+      createTime: now()
+    });
+    // 为已有学生创建账号
+    db.students.forEach(s => {
+      if (!db.users.find(u => u.username === s.studentNo)) {
+        db.users.push({
+          userId: nextId(db, 'user'),
+          username: s.studentNo,
+          password: bcrypt.hashSync('123456', 10),
+          role: 'student',
+          displayName: s.studentName,
+          studentId: s.studentId,
+          createTime: now()
+        });
+      }
+    });
+    migrated = true;
+  }
+  if (migrated) { save(db); }
+  return db;
 }
 
 function save(db) {
@@ -124,6 +160,45 @@ function seed(db) {
   });
 }
 
+// ========== 认证辅助 ==========
+function createStudentUser(db, studentNo, studentName, studentId) {
+  if (db.users.find(u => u.username === studentNo)) return;
+  const hash = bcrypt.hashSync('123456', 10);
+  db.users.push({
+    userId: nextId(db, 'user'),
+    username: studentNo,
+    password: hash,
+    role: 'student',
+    displayName: studentName,
+    studentId: studentId,
+    createTime: now()
+  });
+}
+
+// ========== Auth 中间件 ==========
+function auth(req, res, next) {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) {
+    return res.status(401).json({ code: 401, msg: '未登录，请先登录' });
+  }
+  const token = header.split(' ')[1];
+  const db = load();
+  const session = db.sessions[token];
+  if (!session || session.expiresAt < Date.now()) {
+    if (session) { delete db.sessions[token]; save(db); }
+    return res.status(401).json({ code: 401, msg: '登录已过期，请重新登录' });
+  }
+  req.user = session;
+  req.token = token;
+  next();
+}
+
+function requireTeacher(req, res, next) {
+  if (!req.user) return res.status(401).json({ code: 401, msg: '未登录' });
+  if (req.user.role !== 'teacher') return res.status(403).json({ code: 403, msg: '无权限，仅教师可操作' });
+  next();
+}
+
 // ========== 分页辅助 ==========
 function paginate(list, pageNum = 1, pageSize = 10) {
   const total = list.length;
@@ -132,7 +207,7 @@ function paginate(list, pageNum = 1, pageSize = 10) {
 }
 
 // ============ 学生 API ============
-app.get('/api/student/info/list', (req, res) => {
+app.get('/api/student/info/list', auth, requireTeacher, (req, res) => {
   const db = load();
   let list = [...db.students];
   const { studentNo, studentName, gender, classId, status } = req.query;
@@ -147,7 +222,7 @@ app.get('/api/student/info/list', (req, res) => {
   res.json(paginate(list, parseInt(req.query.pageNum) || 1, parseInt(req.query.pageSize) || 10));
 });
 
-app.get('/api/student/info/all', (req, res) => {
+app.get('/api/student/info/all', auth, requireTeacher, (req, res) => {
   const db = load();
   res.json({ data: db.students.filter(s => s.status === '0') });
 });
@@ -159,7 +234,7 @@ app.get('/api/student/info/:id', (req, res) => {
   res.json({ data: s || null });
 });
 
-app.post('/api/student/info', (req, res) => {
+app.post('/api/student/info', auth, requireTeacher, (req, res) => {
   const db = load();
   const exist = db.students.find(s => s.studentNo === req.body.studentNo);
   if (exist) return res.json({ code: 500, msg: '学号已存在' });
@@ -168,11 +243,12 @@ app.post('/api/student/info', (req, res) => {
   const s = { ...req.body, studentId: id, className: c ? c.className : '', createTime: now(), updateTime: '' };
   db.students.push(s);
   if (c) { c.studentCount = (c.studentCount || 0) + 1; }
+  createStudentUser(db, s.studentNo, s.studentName, id);
   save(db);
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.put('/api/student/info', (req, res) => {
+app.put('/api/student/info', auth, requireTeacher, (req, res) => {
   const db = load();
   const idx = db.students.findIndex(x => x.studentId == req.body.studentId);
   if (idx === -1) return res.json({ code: 500, msg: '学生不存在' });
@@ -195,7 +271,7 @@ app.delete('/api/student/info/:ids', (req, res) => {
 });
 
 // ============ 成绩 API ============
-app.get('/api/student/grade/list', (req, res) => {
+app.get('/api/student/grade/list', auth, requireTeacher, (req, res) => {
   const db = load();
   let list = [...db.grades];
   const { studentNo, studentName, studentId, courseId, semester, examType, isPassed } = req.query;
@@ -228,7 +304,7 @@ function calcGrade(score) {
   return { gradeLevel: '不及格', gradePoint: 0.0 };
 }
 
-app.post('/api/student/grade', (req, res) => {
+app.post('/api/student/grade', auth, requireTeacher, (req, res) => {
   const db = load();
   const id = nextId(db, 'grade');
   const student = db.students.find(s => s.studentId == req.body.studentId);
@@ -248,7 +324,7 @@ app.post('/api/student/grade', (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.put('/api/student/grade', (req, res) => {
+app.put('/api/student/grade', auth, requireTeacher, (req, res) => {
   const db = load();
   const idx = db.grades.findIndex(x => x.gradeId == req.body.gradeId);
   if (idx === -1) return res.json({ code: 500, msg: '成绩不存在' });
@@ -267,7 +343,7 @@ app.delete('/api/student/grade/:ids', (req, res) => {
 });
 
 // ============ 宿舍 API ============
-app.get('/api/student/dormitory/list', (req, res) => {
+app.get('/api/student/dormitory/list', auth, requireTeacher, (req, res) => {
   const db = load();
   let list = [...db.dormitories];
   const { buildingName, roomType, status } = req.query;
@@ -288,7 +364,7 @@ app.get('/api/student/dormitory/:id', (req, res) => {
   res.json({ data: db.dormitories.find(x => x.dormitoryId == req.params.id) || null });
 });
 
-app.post('/api/student/dormitory', (req, res) => {
+app.post('/api/student/dormitory', auth, requireTeacher, (req, res) => {
   const db = load();
   const id = nextId(db, 'dormitory');
   db.dormitories.push({ ...req.body, dormitoryId: id, occupiedCount: 0, createTime: now(), updateTime: '' });
@@ -296,7 +372,7 @@ app.post('/api/student/dormitory', (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.put('/api/student/dormitory', (req, res) => {
+app.put('/api/student/dormitory', auth, requireTeacher, (req, res) => {
   const db = load();
   const idx = db.dormitories.findIndex(x => x.dormitoryId == req.body.dormitoryId);
   if (idx === -1) return res.json({ code: 500, msg: '宿舍不存在' });
@@ -314,7 +390,7 @@ app.delete('/api/student/dormitory/:ids', (req, res) => {
 });
 
 // ============ 住宿分配 API ============
-app.get('/api/student/dormitory/assignment/list', (req, res) => {
+app.get('/api/student/dormitory/assignment/list', auth, requireTeacher, (req, res) => {
   const db = load();
   let list = [...db.assignments];
   list.sort((a, b) => b.assignmentId - a.assignmentId);
@@ -331,7 +407,7 @@ app.get('/api/student/dormitory/assignment/:id', (req, res) => {
   res.json({ data: db.assignments.find(x => x.assignmentId == req.params.id) || null });
 });
 
-app.post('/api/student/dormitory/assignment', (req, res) => {
+app.post('/api/student/dormitory/assignment', auth, requireTeacher, (req, res) => {
   const db = load();
   const dorm = db.dormitories.find(d => d.dormitoryId == req.body.dormitoryId);
   if (!dorm) return res.json({ code: 500, msg: '宿舍不存在' });
@@ -354,7 +430,7 @@ app.post('/api/student/dormitory/assignment', (req, res) => {
   res.json({ code: 200, msg: '分配成功' });
 });
 
-app.put('/api/student/dormitory/assignment', (req, res) => {
+app.put('/api/student/dormitory/assignment', auth, requireTeacher, (req, res) => {
   const db = load();
   const idx = db.assignments.findIndex(x => x.assignmentId == req.body.assignmentId);
   if (idx === -1) return res.json({ code: 500, msg: '记录不存在' });
@@ -388,7 +464,7 @@ app.delete('/api/student/dormitory/assignment/:ids', (req, res) => {
 });
 
 // ============ 班级 API ============
-app.get('/api/student/class/list', (req, res) => {
+app.get('/api/student/class/list', auth, requireTeacher, (req, res) => {
   const db = load();
   let list = [...db.classes];
   const { className, major, department } = req.query;
@@ -408,7 +484,7 @@ app.get('/api/student/class/:id', (req, res) => {
   res.json({ data: db.classes.find(x => x.classId == req.params.id) || null });
 });
 
-app.post('/api/student/class', (req, res) => {
+app.post('/api/student/class', auth, requireTeacher, (req, res) => {
   const db = load();
   if (db.classes.find(c => c.className === req.body.className)) return res.json({ code: 500, msg: '班级名称已存在' });
   const id = nextId(db, 'class');
@@ -417,7 +493,7 @@ app.post('/api/student/class', (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.put('/api/student/class', (req, res) => {
+app.put('/api/student/class', auth, requireTeacher, (req, res) => {
   const db = load();
   const idx = db.classes.findIndex(x => x.classId == req.body.classId);
   if (idx === -1) return res.json({ code: 500, msg: '班级不存在' });
@@ -437,7 +513,7 @@ app.delete('/api/student/class/:ids', (req, res) => {
 });
 
 // ============ 课程 API ============
-app.get('/api/student/course/list', (req, res) => {
+app.get('/api/student/course/list', auth, requireTeacher, (req, res) => {
   const db = load();
   let list = [...db.courses];
   const { courseName, courseType, teacher } = req.query;
@@ -457,7 +533,7 @@ app.get('/api/student/course/:id', (req, res) => {
   res.json({ data: db.courses.find(x => x.courseId == req.params.id) || null });
 });
 
-app.post('/api/student/course', (req, res) => {
+app.post('/api/student/course', auth, requireTeacher, (req, res) => {
   const db = load();
   if (db.courses.find(c => c.courseCode === req.body.courseCode)) return res.json({ code: 500, msg: '课程编码已存在' });
   const id = nextId(db, 'course');
@@ -466,7 +542,7 @@ app.post('/api/student/course', (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.put('/api/student/course', (req, res) => {
+app.put('/api/student/course', auth, requireTeacher, (req, res) => {
   const db = load();
   const idx = db.courses.findIndex(x => x.courseId == req.body.courseId);
   if (idx === -1) return res.json({ code: 500, msg: '课程不存在' });
@@ -486,7 +562,7 @@ app.delete('/api/student/course/:ids', (req, res) => {
 });
 
 // ============ 仪表盘统计 ============
-app.get('/api/dashboard/stats', (req, res) => {
+app.get('/api/dashboard/stats', auth, (req, res) => {
   const db = load();
   res.json({
     studentCount: db.students.filter(s => s.status === '0').length,
@@ -498,15 +574,98 @@ app.get('/api/dashboard/stats', (req, res) => {
   });
 });
 
+// ============ 认证 API ============
+// 登录
+app.post('/api/auth/login', (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.json({ code: 500, msg: '请输入用户名和密码' });
+  const db = load();
+  const user = db.users.find(u => u.username === username);
+  if (!user) return res.json({ code: 500, msg: '用户名或密码错误' });
+  if (!bcrypt.compareSync(password, user.password)) return res.json({ code: 500, msg: '用户名或密码错误' });
+  // 生成 session
+  const token = crypto.randomUUID();
+  db.sessions[token] = {
+    userId: user.userId,
+    username: user.username,
+    role: user.role,
+    displayName: user.displayName,
+    studentId: user.studentId || null,
+    expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000 // 7天
+  };
+  save(db);
+  res.json({
+    code: 200,
+    msg: '登录成功',
+    data: {
+      token,
+      user: { userId: user.userId, username: user.username, role: user.role, displayName: user.displayName, studentId: user.studentId || null }
+    }
+  });
+});
+
+// 登出
+app.post('/api/auth/logout', auth, (req, res) => {
+  const db = load();
+  delete db.sessions[req.token];
+  save(db);
+  res.json({ code: 200, msg: '已退出登录' });
+});
+
+// 获取当前用户
+app.get('/api/auth/me', auth, (req, res) => {
+  res.json({ code: 200, data: req.user });
+});
+
+// 修改密码
+app.put('/api/auth/change-password', auth, (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+  if (!oldPassword || !newPassword) return res.json({ code: 500, msg: '请填写完整' });
+  if (newPassword.length < 4) return res.json({ code: 500, msg: '新密码至少4位' });
+  const db = load();
+  const user = db.users.find(u => u.userId === req.user.userId);
+  if (!user) return res.json({ code: 500, msg: '用户不存在' });
+  if (!bcrypt.compareSync(oldPassword, user.password)) return res.json({ code: 500, msg: '旧密码错误' });
+  user.password = bcrypt.hashSync(newPassword, 10);
+  user.updateTime = now();
+  // 清除该用户所有 session，需重新登录
+  Object.keys(db.sessions).forEach(k => { if (db.sessions[k].userId === user.userId) delete db.sessions[k]; });
+  save(db);
+  res.json({ code: 200, msg: '密码修改成功，请重新登录' });
+});
+
+// ============ 学生自查 API ============
+app.get('/api/student/self/profile', auth, (req, res) => {
+  if (req.user.role !== 'student') return res.json({ code: 403, msg: '仅学生可访问' });
+  const db = load();
+  const student = db.students.find(s => s.studentId === req.user.studentId);
+  if (!student) return res.json({ code: 404, msg: '未找到学生信息' });
+  res.json({ code: 200, data: student });
+});
+
+app.get('/api/student/self/grades', auth, (req, res) => {
+  if (req.user.role !== 'student') return res.json({ code: 403, msg: '仅学生可访问' });
+  const db = load();
+  const grades = db.grades.filter(g => g.studentId === req.user.studentId).sort((a, b) => b.gradeId - a.gradeId);
+  res.json({ code: 200, data: grades });
+});
+
+app.get('/api/student/self/dormitory', auth, (req, res) => {
+  if (req.user.role !== 'student') return res.json({ code: 403, msg: '仅学生可访问' });
+  const db = load();
+  const assignment = db.assignments.find(a => a.studentId === req.user.studentId && a.isCurrent === '1');
+  res.json({ code: 200, data: assignment || null });
+});
+
 // ============ 数据导出/导入 API ============
-app.get('/api/data/export', (req, res) => {
+app.get('/api/data/export', auth, requireTeacher, (req, res) => {
   const db = load();
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Content-Disposition', 'attachment; filename=data-backup.json');
   res.json(db);
 });
 
-app.post('/api/data/import', (req, res) => {
+app.post('/api/data/import', auth, requireTeacher, (req, res) => {
   try {
     const newData = req.body;
     // 基本校验

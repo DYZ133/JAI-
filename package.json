@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "axios": "^1.18.1",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "element-ui": "^2.15.14",
     "express": "^5.2.1",

@@ -292,11 +292,32 @@
     }
   ],
   "nextId": {
-    "student": 5,
+    "student": 7,
     "grade": 7,
     "dormitory": 7,
     "assignment": 3,
     "class": 4,
-    "course": 7
-  }
+    "course": 7,
+    "user": 4
+  },
+  "users": [
+    {
+      "userId": 1,
+      "username": "admin",
+      "password": "$2b$10$7JhiKuVbf5qV8dHMCWkNWOV.B7xkeA.iESiKKNOS/EVm0qVKOTLuu",
+      "role": "teacher",
+      "displayName": "管理员",
+      "createTime": "2026-07-28 09:19:54"
+    },
+    {
+      "userId": 2,
+      "username": "1235031007",
+      "password": "$2b$10$GOR0zYB4n3Bzy8OIO26sBuhkq1swRuy/SjFscePaUvarEhRkWR8Za",
+      "role": "student",
+      "displayName": "董一喆",
+      "studentId": 4,
+      "createTime": "2026-07-28 09:19:54"
+    }
+  ],
+  "sessions": {}
 }

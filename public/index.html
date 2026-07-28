@@ -37,8 +37,10 @@ body { font-family: 'Microsoft YaHei', sans-serif; background: #f0f2f5; color: #
 <div id="app">
   <div class="app-header">
     <span style="font-size:28px">🎓</span>
-    <h1>学生信息管理系统</h1>
+    <h1>学生信息管理系统 - 教师端</h1>
     <div style="flex:1"></div>
+    <span style="font-size:13px;opacity:.85;margin-right:16px">👨‍🏫 {{ userName }}</span>
+    <el-button size="mini" type="danger" plain @click="logout" style="margin-right:12px">退出</el-button>
     <span style="font-size:13px;opacity:.85">{{ today }}</span>
   </div>
   <div class="app-body">
@@ -396,6 +398,12 @@ function paginate(list, pageNum, pageSize) {
   return { rows: list.slice((pageNum-1)*pageSize, pageNum*pageSize), total: list.length };
 }
 
+// 认证检查
+if (!localStorage.getItem("token") || localStorage.getItem("role") !== "teacher") {
+  localStorage.clear();
+  window.location.href = "/login.html";
+}
+
 new Vue({
   el: '#app',
   data: {
@@ -609,6 +617,13 @@ new Vue({
     },
 
     // ==== 数据导入导出 ====
+    logout: function() {
+      var self = this;
+      api.post("/auth/logout").finally(function() {
+        localStorage.clear();
+        window.location.href = "/login.html";
+      });
+    },
     copyShareUrl: function() {
       var url = this.shareQueryUrl;
       if (navigator.clipboard) {

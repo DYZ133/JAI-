@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学生门户 - 人工智能学院</title>
+<link rel="stylesheet" href="/lib/element-ui/lib/theme-chalk/index.css">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif; background: #f0f2f5; min-height: 100vh; }
+.top-bar { background: linear-gradient(135deg, #1890ff, #096dd9); color: #fff; padding: 12px 20px; display: flex; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.1); position: sticky; top: 0; z-index: 100; }
+.top-bar .logo { font-size: 28px; margin-right: 10px; }
+.top-bar h1 { font-size: 17px; font-weight: 600; }
+.top-bar .user { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: 13px; }
+@media (max-width: 600px) {
+  .top-bar h1 { font-size: 14px; }
+  .top-bar .user { font-size: 12px; gap: 6px; }
+}
+.container { max-width: 800px; margin: 0 auto; padding: 20px 16px 40px; }
+.welcome-card { background: linear-gradient(135deg, #1890ff, #096dd9); color: #fff; border-radius: 12px; padding: 24px 28px; margin-bottom: 16px; box-shadow: 0 4px 16px rgba(24,144,255,.25); }
+.welcome-card .greeting { font-size: 14px; opacity: .85; }
+.welcome-card .name { font-size: 24px; font-weight: bold; margin: 4px 0; }
+.welcome-card .detail { font-size: 13px; opacity: .75; margin-top: 4px; }
+.stats-row { display: flex; gap: 12px; margin-bottom: 16px; }
+.stats-row .stat { flex: 1; background: #fff; border-radius: 10px; padding: 16px 18px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+.stats-row .stat .num { font-size: 26px; font-weight: bold; color: #1890ff; }
+.stats-row .stat .lbl { font-size: 12px; color: #999; margin-top: 2px; }
+.section { background: #fff; border-radius: 10px; padding: 20px 24px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+.section h3 { font-size: 15px; color: #333; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #f0f0f0; }
+.info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px 20px; font-size: 13px; }
+.info-grid .item { display: flex; line-height: 2; }
+.info-grid .item .l { color: #999; flex-shrink: 0; min-width: 55px; }
+.info-grid .item .v { color: #333; }
+.grade-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.grade-table th { background: #fafafa; padding: 8px 10px; text-align: left; color: #666; font-weight: 600; border-bottom: 2px solid #e8e8e8; white-space: nowrap; }
+.grade-table td { padding: 7px 10px; border-bottom: 1px solid #f0f0f0; }
+.grade-table tr:hover td { background: #fafafa; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; white-space: nowrap; }
+.tag-a { background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f; }
+.tag-b { background: #e6f7ff; color: #1890ff; border: 1px solid #91d5ff; }
+.tag-c { background: #fff7e6; color: #fa8c16; border: 1px solid #ffd591; }
+.tag-d { background: #fffbe6; color: #fadb14; border: 1px solid #ffe58f; }
+.tag-e { background: #fff1f0; color: #f5222d; border: 1px solid #ffa39e; }
+.tag-pass { background: #f6ffed; color: #52c41a; }
+.tag-fail { background: #fff1f0; color: #f5222d; }
+.empty-hint { text-align: center; color: #ccc; font-size: 13px; padding: 24px; }
+.loading-box { text-align: center; padding: 60px 24px; color: #999; }
+.loading-box .spinner { font-size: 36px; animation: spin 1s linear infinite; display: block; margin-bottom: 8px; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@media print {
+  body { background: #fff; }
+  .top-bar { display: none; }
+  .section { box-shadow: none; border: 1px solid #ddd; break-inside: avoid; }
+  .container { max-width: 100%; padding: 0; }
+}
+@media (max-width: 500px) {
+  .stats-row { flex-wrap: wrap; }
+  .stats-row .stat { min-width: calc(50% - 6px); }
+  .info-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- 顶部导航 -->
+  <div class="top-bar">
+    <span class="logo">🎓</span>
+    <h1>学生门户</h1>
+    <div class="user">
+      <span>👨‍🎓 {{ displayName }}</span>
+      <el-button size="mini" @click="changePwdDialog = true">修改密码</el-button>
+      <el-button size="mini" type="danger" plain @click="logout">退出</el-button>
+    </div>
+  </div>
+
+  <div class="container" v-if="!loading">
+    <!-- 欢迎卡片 -->
+    <div class="welcome-card">
+      <div class="greeting">{{ greeting }}</div>
+      <div class="name">{{ student.studentName }}</div>
+      <div class="detail">学号：{{ student.studentNo }} · {{ student.className || '未分班' }}</div>
+    </div>
+
+    <!-- 成绩统计 -->
+    <div class="stats-row">
+      <div class="stat">
+        <div class="num">{{ avgScore }}</div>
+        <div class="lbl">平均分</div>
+      </div>
+      <div class="stat">
+        <div class="num">{{ avgGPA }}</div>
+        <div class="lbl">平均绩点</div>
+      </div>
+      <div class="stat">
+        <div class="num">{{ passRate }}%</div>
+        <div class="lbl">通过率</div>
+      </div>
+      <div class="stat">
+        <div class="num">{{ grades.length }}</div>
+        <div class="lbl">课程数</div>
+      </div>
+    </div>
+
+    <!-- 个人信息 -->
+    <div class="section">
+      <h3>📋 基本信息</h3>
+      <div class="info-grid">
+        <div class="item"><span class="l">姓名</span><span class="v">{{ student.studentName }}</span></div>
+        <div class="item"><span class="l">学号</span><span class="v">{{ student.studentNo }}</span></div>
+        <div class="item"><span class="l">性别</span><span class="v">{{ student.gender === '0' ? '男' : '女' }}</span></div>
+        <div class="item" v-if="student.birthDate"><span class="l">出生日期</span><span class="v">{{ student.birthDate }}</span></div>
+        <div class="item"><span class="l">班级</span><span class="v">{{ student.className || '-' }}</span></div>
+        <div class="item" v-if="student.phone"><span class="l">手机</span><span class="v">{{ student.phone }}</span></div>
+        <div class="item" v-if="student.email"><span class="l">邮箱</span><span class="v">{{ student.email }}</span></div>
+        <div class="item" v-if="student.nativePlace"><span class="l">籍贯</span><span class="v">{{ student.nativePlace }}</span></div>
+        <div class="item" v-if="student.nation"><span class="l">民族</span><span class="v">{{ student.nation }}</span></div>
+        <div class="item" v-if="student.politicalStatus"><span class="l">政治面貌</span><span class="v">{{ student.politicalStatus }}</span></div>
+        <div class="item" v-if="student.enrollmentDate"><span class="l">入学日期</span><span class="v">{{ student.enrollmentDate }}</span></div>
+      </div>
+    </div>
+
+    <!-- 住宿信息 -->
+    <div class="section" v-if="dormitory">
+      <h3>🏠 住宿信息</h3>
+      <div class="info-grid">
+        <div class="item"><span class="l">宿舍楼</span><span class="v">{{ dormitory.buildingName }}</span></div>
+        <div class="item"><span class="l">房间号</span><span class="v">{{ dormitory.roomNo }}</span></div>
+        <div class="item"><span class="l">床位</span><span class="v">{{ dormitory.bedNo }}</span></div>
+        <div class="item"><span class="l">入住日期</span><span class="v">{{ dormitory.checkInDate }}</span></div>
+      </div>
+    </div>
+    <div class="section" v-if="!dormitory">
+      <h3>🏠 住宿信息</h3>
+      <div class="empty-hint">暂未分配宿舍</div>
+    </div>
+
+    <!-- 成绩列表 -->
+    <div class="section">
+      <h3>📝 成绩记录（{{ grades.length }} 门）</h3>
+      <table class="grade-table" v-if="grades.length > 0">
+        <thead>
+          <tr><th>课程</th><th>学期</th><th>类型</th><th>分数</th><th>绩点</th><th>等级</th><th>通过</th></tr>
+        </thead>
+        <tbody>
+          <tr v-for="g in grades" :key="g.gradeId">
+            <td>{{ g.courseName }}</td>
+            <td>{{ g.semester }}</td>
+            <td>{{ g.examType }}</td>
+            <td>{{ g.score }}</td>
+            <td>{{ g.gradePoint }}</td>
+            <td><span :class="'tag tag-' + levelClass(g.gradeLevel)">{{ g.gradeLevel }}</span></td>
+            <td><span :class="'tag ' + (g.isPassed === '1' ? 'tag-pass' : 'tag-fail')">{{ g.isPassed === '1' ? '通过' : '未过' }}</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="empty-hint" v-if="grades.length === 0">暂无成绩记录</div>
+    </div>
+  </div>
+
+  <!-- 加载中 -->
+  <div class="loading-box" v-if="loading">
+    <span class="spinner">⏳</span>
+    <p>加载中...</p>
+  </div>
+
+  <!-- 修改密码弹窗 -->
+  <el-dialog title="修改密码" :visible.sync="changePwdDialog" width="380px">
+    <el-form label-width="90px" size="small">
+      <el-form-item label="旧密码">
+        <el-input v-model="pwdForm.oldPassword" type="password" show-password></el-input>
+      </el-form-item>
+      <el-form-item label="新密码">
+        <el-input v-model="pwdForm.newPassword" type="password" show-password placeholder="至少4位"></el-input>
+      </el-form-item>
+    </el-form>
+    <div slot="footer">
+      <el-button @click="changePwdDialog = false">取消</el-button>
+      <el-button type="primary" @click="changePassword" :loading="pwdLoading">确定</el-button>
+    </div>
+  </el-dialog>
+</div>
+
+<script src="/lib/vue/dist/vue.js"></script>
+<script src="/lib/element-ui/lib/index.js"></script>
+<script src="/lib/axios/dist/axios.min.js"></script>
+<script>
+// 认证检查
+if (!localStorage.getItem('token') || localStorage.getItem('role') !== 'student') {
+  localStorage.clear();
+  window.location.href = '/login.html';
+}
+
+var api = axios.create({ baseURL: '/api' });
+// 请求拦截器：自动附加 token
+api.interceptors.request.use(function(config) {
+  var token = localStorage.getItem('token');
+  if (token) config.headers.Authorization = 'Bearer ' + token;
+  return config;
+}, function(err) { return Promise.reject(err); });
+// 响应拦截器：401 跳转登录
+api.interceptors.response.use(function(res) {
+  if (res.data && res.data.code === 401) { localStorage.clear(); window.location.href = '/login.html'; }
+  return res;
+}, function(err) { if (err.response && err.response.status === 401) { localStorage.clear(); window.location.href = '/login.html'; } return Promise.reject(err); });
+
+var hour = new Date().getHours();
+
+new Vue({
+  el: '#app',
+  data: {
+    displayName: localStorage.getItem('displayName') || '同学',
+    student: {},
+    grades: [],
+    dormitory: null,
+    loading: true,
+    changePwdDialog: false,
+    pwdForm: { oldPassword: '', newPassword: '' },
+    pwdLoading: false
+  },
+  computed: {
+    greeting: function() {
+      if (hour < 6) return '夜深了，早点休息 🌙';
+      if (hour < 12) return '早上好 ☀️';
+      if (hour < 14) return '中午好 🌤️';
+      if (hour < 18) return '下午好 🌈';
+      return '晚上好 🌙';
+    },
+    avgScore: function() {
+      if (this.grades.length === 0) return '-';
+      var sum = this.grades.reduce(function(a, g) { return a + (g.score || 0); }, 0);
+      return (sum / this.grades.length).toFixed(1);
+    },
+    avgGPA: function() {
+      if (this.grades.length === 0) return '-';
+      var sum = this.grades.reduce(function(a, g) { return a + (g.gradePoint || 0); }, 0);
+      return (sum / this.grades.length).toFixed(2);
+    },
+    passRate: function() {
+      if (this.grades.length === 0) return 0;
+      var passed = this.grades.filter(function(g) { return g.isPassed === '1'; }).length;
+      return (passed / this.grades.length * 100).toFixed(0);
+    }
+  },
+  mounted: function() {
+    this.loadData();
+  },
+  methods: {
+    levelClass: function(level) {
+      if (level === '优秀') return 'a';
+      if (level === '良好') return 'b';
+      if (level === '中等') return 'c';
+      if (level === '及格') return 'd';
+      return 'e';
+    },
+    loadData: function() {
+      var self = this;
+      Promise.all([
+        api.get('/student/self/profile'),
+        api.get('/student/self/grades'),
+        api.get('/student/self/dormitory')
+      ]).then(function(results) {
+        self.student = results[0].data.data || {};
+        self.grades = results[1].data.data || [];
+        self.dormitory = results[2].data.data;
+        self.loading = false;
+      }).catch(function() {
+        self.loading = false;
+        self.$message.error('加载数据失败');
+      });
+    },
+    changePassword: function() {
+      var self = this;
+      if (!this.pwdForm.oldPassword || !this.pwdForm.newPassword) {
+        this.$message.warning('请填写完整');
+        return;
+      }
+      if (this.pwdForm.newPassword.length < 4) {
+        this.$message.warning('新密码至少4位');
+        return;
+      }
+      this.pwdLoading = true;
+      api.put('/auth/change-password', this.pwdForm).then(function(r) {
+        self.pwdLoading = false;
+        if (r.data.code === 200) {
+          self.$message.success('密码修改成功，请重新登录');
+          self.changePwdDialog = false;
+          setTimeout(function() {
+            localStorage.clear();
+            window.location.href = '/login.html';
+          }, 1500);
+        } else {
+          self.$message.error(r.data.msg);
+        }
+      }).catch(function() {
+        self.pwdLoading = false;
+        self.$message.error('修改失败');
+      });
+    },
+    logout: function() {
+      var self = this;
+      api.post('/auth/logout').finally(function() {
+        localStorage.clear();
+        window.location.href = '/login.html';
+      });
+    }
+  }
+});
+</script>
+</body>
+</html>

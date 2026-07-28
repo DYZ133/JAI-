@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>登录 - 人工智能学院学生信息管理系统</title>
+<link rel="stylesheet" href="/lib/element-ui/lib/theme-chalk/index.css">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.login-wrapper {
+  width: 400px;
+  max-width: 92vw;
+}
+.login-header {
+  text-align: center;
+  color: #fff;
+  margin-bottom: 28px;
+}
+.login-header .logo { font-size: 52px; display: block; margin-bottom: 4px; }
+.login-header h1 { font-size: 22px; font-weight: 600; }
+.login-header p { font-size: 13px; opacity: .8; margin-top: 4px; }
+.login-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 36px 32px 28px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.2);
+}
+.login-card h2 { font-size: 17px; color: #333; text-align: center; margin-bottom: 24px; }
+.login-card .el-form-item { margin-bottom: 20px; }
+.login-card .el-button--primary { width: 100%; height: 42px; font-size: 15px; letter-spacing: 2px; }
+.login-tips {
+  text-align: center;
+  margin-top: 20px;
+  color: rgba(255,255,255,.75);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.login-tips b { color: #fff; }
+.login-error {
+  background: #fef0f0;
+  border: 1px solid #fde2e2;
+  color: #f56c6c;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+.fade-enter-active, .fade-leave-active { transition: opacity .3s; }
+.fade-enter, .fade-leave-to { opacity: 0; }
+@media (max-width: 480px) {
+  .login-card { padding: 24px 18px 20px; }
+  .login-header h1 { font-size: 18px; }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="login-wrapper">
+    <div class="login-header">
+      <span class="logo">🎓</span>
+      <h1>人工智能学院</h1>
+      <p>学生信息管理系统</p>
+    </div>
+
+    <div class="login-card">
+      <h2>🔐 用户登录</h2>
+
+      <transition name="fade">
+        <div class="login-error" v-if="errorMsg">{{ errorMsg }}</div>
+      </transition>
+
+      <el-form @keyup.enter="login">
+        <el-form-item>
+          <el-input v-model="username" placeholder="用户名" size="medium" prefix-icon="el-icon-user-solid" clearable></el-input>
+        </el-form-item>
+        <el-form-item>
+          <el-input v-model="password" type="password" placeholder="密码" size="medium" prefix-icon="el-icon-lock" show-password clearable></el-input>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :loading="loading" @click="login">登 录</el-button>
+        </el-form-item>
+      </el-form>
+    </div>
+
+    <div class="login-tips">
+      <div>👨‍🏫 教师测试账号：<b>admin</b> / <b>admin123</b></div>
+      <div>👨‍🎓 学生测试账号：<b>学号</b> / <b>123456</b></div>
+    </div>
+  </div>
+</div>
+
+<script src="/lib/vue/dist/vue.js"></script>
+<script src="/lib/element-ui/lib/index.js"></script>
+<script src="/lib/axios/dist/axios.min.js"></script>
+<script>
+var api = axios.create({ baseURL: '/api' });
+
+// 检查是否已登录
+var token = localStorage.getItem('token');
+var role = localStorage.getItem('role');
+if (token) {
+  // 验证 token 是否有效
+  api.get('/auth/me', { headers: { Authorization: 'Bearer ' + token } }).then(function(r) {
+    if (r.data.code === 200) {
+      if (role === 'teacher') window.location.href = '/index.html';
+      else window.location.href = '/student.html';
+    } else {
+      localStorage.clear();
+    }
+  }).catch(function() {
+    localStorage.clear();
+  });
+}
+
+new Vue({
+  el: '#app',
+  data: {
+    username: '',
+    password: '',
+    loading: false,
+    errorMsg: ''
+  },
+  methods: {
+    login: function() {
+      var self = this;
+      if (!this.username.trim() || !this.password.trim()) {
+        this.errorMsg = '请输入用户名和密码';
+        return;
+      }
+      this.loading = true;
+      this.errorMsg = '';
+      api.post('/auth/login', {
+        username: this.username.trim(),
+        password: this.password
+      }).then(function(r) {
+        self.loading = false;
+        if (r.data.code === 200) {
+          var data = r.data.data;
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('role', data.user.role);
+          localStorage.setItem('displayName', data.user.displayName);
+          localStorage.setItem('username', data.user.username);
+          if (data.user.studentId) localStorage.setItem('studentId', data.user.studentId);
+          if (data.user.role === 'teacher') {
+            window.location.href = '/index.html';
+          } else {
+            window.location.href = '/student.html';
+          }
+        } else {
+          self.errorMsg = r.data.msg;
+        }
+      }).catch(function() {
+        self.loading = false;
+        self.errorMsg = '网络错误，请重试';
+      });
+    }
+  }
+});
+</script>
+</body>
+</html>
