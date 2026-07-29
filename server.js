@@ -5,6 +5,35 @@ const path = require('path');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 
+// ========== JWT 无状态令牌（解决 Vercel 多实例 session 不共享问题）==========
+const JWT_SECRET = process.env.JWT_SECRET || 'student-system-jwt-secret-2026-key';
+const JWT_EXPIRES = 7 * 24 * 60 * 60; // 7天
+
+function base64url(str) {
+  return Buffer.from(str).toString('base64url');
+}
+
+function createToken(payload) {
+  const header = base64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const body = base64url(JSON.stringify({ ...payload, iat: Math.floor(Date.now() / 1000) }));
+  const signature = crypto.createHmac('sha256', JWT_SECRET).update(header + '.' + body).digest('base64url');
+  return header + '.' + body + '.' + signature;
+}
+
+function verifyToken(token) {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const expectedSig = crypto.createHmac('sha256', JWT_SECRET).update(parts[0] + '.' + parts[1]).digest('base64url');
+    if (!crypto.timingSafeEqual(Buffer.from(expectedSig), Buffer.from(parts[2]))) return null;
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf-8'));
+    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return null;
+    return payload;
+  } catch(e) {
+    return null;
+  }
+}
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -33,7 +62,6 @@ function load() {
       classes: [],
       courses: [],
       users: [],
-      sessions: {},
       nextId: { student: 1, grade: 1, dormitory: 1, assignment: 1, class: 1, course: 1, user: 1 }
     };
     seed(init);
@@ -44,7 +72,6 @@ function load() {
   // 数据迁移：确保新字段存在
   let migrated = false;
   if (!db.users) { db.users = []; migrated = true; }
-  if (!db.sessions) { db.sessions = {}; migrated = true; }
   if (!db.nextId.user) { db.nextId.user = db.users.length + 1; migrated = true; }
   if (db.users.length === 0) {
     db.users.push({
@@ -184,20 +211,18 @@ function createStudentUser(db, studentNo, studentName, studentId) {
   });
 }
 
-// ========== Auth 中间件 ==========
+// ========== Auth 中间件（JWT 验证，无需 session 存储）==========
 function auth(req, res, next) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) {
     return res.status(401).json({ code: 401, msg: '未登录，请先登录' });
   }
   const token = header.split(' ')[1];
-  const db = load();
-  const session = db.sessions[token];
-  if (!session || session.expiresAt < Date.now()) {
-    if (session) { delete db.sessions[token]; save(db); }
+  const payload = verifyToken(token);
+  if (!payload) {
     return res.status(401).json({ code: 401, msg: '登录已过期，请重新登录' });
   }
-  req.user = session;
+  req.user = payload;
   req.token = token;
   next();
 }
@@ -592,17 +617,15 @@ app.post('/api/auth/login', (req, res) => {
   const user = db.users.find(u => u.username === username);
   if (!user) return res.json({ code: 500, msg: '用户名或密码错误' });
   if (!bcrypt.compareSync(password, user.password)) return res.json({ code: 500, msg: '用户名或密码错误' });
-  // 生成 session
-  const token = crypto.randomUUID();
-  db.sessions[token] = {
+  // 生成 JWT（无状态，服务器端不存 session）
+  const token = createToken({
     userId: user.userId,
     username: user.username,
     role: user.role,
     displayName: user.displayName,
     studentId: user.studentId || null,
-    expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000 // 7天
-  };
-  save(db);
+    exp: Math.floor(Date.now() / 1000) + JWT_EXPIRES
+  });
   res.json({
     code: 200,
     msg: '登录成功',
@@ -613,11 +636,8 @@ app.post('/api/auth/login', (req, res) => {
   });
 });
 
-// 登出
+// 登出（JWT 只需客户端清除 token）
 app.post('/api/auth/logout', auth, (req, res) => {
-  const db = load();
-  delete db.sessions[req.token];
-  save(db);
   res.json({ code: 200, msg: '已退出登录' });
 });
 
@@ -637,9 +657,8 @@ app.put('/api/auth/change-password', auth, (req, res) => {
   if (!bcrypt.compareSync(oldPassword, user.password)) return res.json({ code: 500, msg: '旧密码错误' });
   user.password = bcrypt.hashSync(newPassword, 10);
   user.updateTime = now();
-  // 清除该用户所有 session，需重新登录
-  Object.keys(db.sessions).forEach(k => { if (db.sessions[k].userId === user.userId) delete db.sessions[k]; });
   save(db);
+  // JWT 无状态，旧 token 仍然有效直到过期，提醒用户用新密码重新登录
   res.json({ code: 200, msg: '密码修改成功，请重新登录' });
 });
 

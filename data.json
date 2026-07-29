@@ -335,6 +335,30 @@
       "displayName": "董一喆",
       "studentId": 4,
       "expiresAt": 1785836227855
+    },
+    "6c715d51-7a71-441d-a946-66c97592065c": {
+      "userId": 1,
+      "username": "admin",
+      "role": "teacher",
+      "displayName": "管理员",
+      "studentId": null,
+      "expiresAt": 1785892862372
+    },
+    "e849659b-e5eb-49e0-a3cb-3d7ad4c897ed": {
+      "userId": 1,
+      "username": "admin",
+      "role": "teacher",
+      "displayName": "管理员",
+      "studentId": null,
+      "expiresAt": 1785893098832
+    },
+    "497e5c72-80b8-4a37-a9b2-a72e70198656": {
+      "userId": 1,
+      "username": "admin",
+      "role": "teacher",
+      "displayName": "管理员",
+      "studentId": null,
+      "expiresAt": 1785893152631
     }
   }
 }
