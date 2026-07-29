@@ -384,6 +384,19 @@ body { font-family: 'Microsoft YaHei', sans-serif; background: #f0f2f5; color: #
 <script src="/lib/axios/dist/axios.min.js"></script>
 <script>
 var api = axios.create({ baseURL: '/api' });
+// 请求拦截器：自动附加 token
+api.interceptors.request.use(function(config) {
+  var token = localStorage.getItem('token');
+  if (token) config.headers.Authorization = 'Bearer ' + token;
+  return config;
+}, function(err) { return Promise.reject(err); });
+
+// 响应拦截器：401 跳转登录
+api.interceptors.response.use(function(res) {
+  if (res.data && res.data.code === 401) { localStorage.clear(); window.location.href = '/login.html'; }
+  return res;
+}, function(err) { if (err.response && err.response.status === 401) { localStorage.clear(); window.location.href = '/login.html'; } return Promise.reject(err); });
+
 
 function calcGrade(score) {
   if (score >= 90) return { gradeLevel: '优秀', gradePoint: 4.0 };

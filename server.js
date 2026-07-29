@@ -11,11 +11,20 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/lib', express.static(path.join(__dirname, 'node_modules')));
 
-const DB_FILE = path.join(__dirname, 'data.json');
+// Vercel serverless 环境用 /tmp 目录（可读写但重启丢失），本地用 __dirname
+const IS_VERCEL = !!process.env.VERCEL;
+const DATA_DIR = IS_VERCEL ? '/tmp' : __dirname;
+const SEED_FILE = path.join(__dirname, 'data.json');     // 初始种子数据（随部署打包）
+const DB_FILE = path.join(DATA_DIR, 'data.json');        // 运行时数据文件
 
 // ========== 数据存储 ==========
 function load() {
+  // Vercel: 冷启动时 /tmp/data.json 不存在，从打包的种子文件复制
   if (!fs.existsSync(DB_FILE)) {
+    if (IS_VERCEL && fs.existsSync(SEED_FILE)) {
+      fs.copyFileSync(SEED_FILE, DB_FILE);
+      return JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
+    }
     const init = {
       students: [],
       grades: [],
@@ -741,10 +750,16 @@ app.get('/api/public/student/:id', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3456;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`========================================`);
-  console.log(`  学生信息管理系统已启动！`);
-  console.log(`  请在浏览器中打开:`);
-  console.log(`  http://localhost:${PORT}`);
-  console.log(`========================================`);
-});
+
+// 导出 app 供 Vercel serverless 使用
+module.exports = app;
+
+// 只在非 Vercel 环境（本地开发）启动监听
+if (!IS_VERCEL) {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`========================================`);
+    console.log(`  学生信息管理系统已启动！`);
+    console.log(`  本地访问: http://localhost:${PORT}`);
+    console.log(`========================================`);
+  });
+}
