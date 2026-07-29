@@ -9,7 +9,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/lib', express.static(path.join(__dirname, 'node_modules')));
+app.use('/lib', express.static(path.join(__dirname, 'public', 'lib')));
 
 // Vercel serverless 环境用 /tmp 目录（可读写但重启丢失），本地用 __dirname
 const IS_VERCEL = !!process.env.VERCEL;
