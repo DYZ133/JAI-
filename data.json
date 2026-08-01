@@ -20,19 +20,6 @@
       "className": "",
       "createTime": "2026-07-27 10:20:39",
       "updateTime": ""
-    },
-    {
-      "studentNo": "2024007",
-      "studentName": "�־û�����",
-      "gender": "0",
-      "classId": 1,
-      "phone": "13900000001",
-      "status": "0",
-      "remark": "",
-      "studentId": 8,
-      "className": "软件工程2401班",
-      "createTime": "2026-08-01 10:49:24",
-      "updateTime": ""
     }
   ],
   "grades": [],
