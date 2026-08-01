@@ -5,7 +5,7 @@
       "studentName": "董一喆",
       "gender": "0",
       "birthDate": "2004-08-12",
-      "classId": 5,
+      "classId": "",
       "phone": "13333019576",
       "email": "",
       "idCard": "",
@@ -17,29 +17,8 @@
       "status": "0",
       "remark": "",
       "studentId": 4,
-      "className": "23虚拟现实1班",
+      "className": "",
       "createTime": "2026-07-27 10:20:39",
-      "updateTime": "2026-08-01 11:19:09"
-    },
-    {
-      "studentNo": "1235031034",
-      "studentName": "李梓慕",
-      "gender": "0",
-      "birthDate": "",
-      "classId": 5,
-      "phone": "",
-      "email": "",
-      "idCard": "",
-      "nativePlace": "",
-      "nation": "",
-      "politicalStatus": "",
-      "enrollmentDate": "",
-      "graduationDate": "",
-      "status": "0",
-      "remark": "",
-      "studentId": 8,
-      "className": "23虚拟现实1班",
-      "createTime": "2026-08-01 11:18:56",
       "updateTime": ""
     }
   ],
@@ -229,7 +208,7 @@
       "major": "虚拟现实技术",
       "department": "人工智能学院",
       "classTeacher": "",
-      "studentCount": 1,
+      "studentCount": 0,
       "status": "0",
       "createBy": "admin",
       "createTime": "2026-08-01 10:00:00",
@@ -628,18 +607,13 @@
     }
   ],
   "nextId": {
-    "student": 9,
+    "student": 8,
     "grade": 7,
     "dormitory": 7,
     "assignment": 3,
     "class": 25,
     "course": 7,
-    "user": 6,
-    "reward": 1,
-    "aid": 1,
-    "award": 1,
-    "club": 1,
-    "leadership": 1
+    "user": 5
   },
   "users": [
     {
@@ -658,15 +632,6 @@
       "displayName": "董一喆",
       "studentId": 4,
       "createTime": "2026-07-28 09:19:54"
-    },
-    {
-      "userId": 5,
-      "username": "1235031034",
-      "password": "$2b$10$rBToy0W1Eiy6f9fOSOOQ7.YK8ilt6cBrGlK9DxGnDj/I8T/8xZf6.",
-      "role": "student",
-      "displayName": "李梓慕",
-      "studentId": 8,
-      "createTime": "2026-08-01 11:18:56"
     }
   ],
   "sessions": {
@@ -710,10 +675,5 @@
       "studentId": null,
       "expiresAt": 1785893152631
     }
-  },
-  "rewards": [],
-  "aids": [],
-  "awards": [],
-  "clubs": [],
-  "leaderships": []
+  }
 }
