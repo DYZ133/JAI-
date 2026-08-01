@@ -20,6 +20,19 @@
       "className": "",
       "createTime": "2026-07-27 10:20:39",
       "updateTime": ""
+    },
+    {
+      "studentNo": "2024007",
+      "studentName": "�־û�����",
+      "gender": "0",
+      "classId": 1,
+      "phone": "13900000001",
+      "status": "0",
+      "remark": "",
+      "studentId": 8,
+      "className": "软件工程2401班",
+      "createTime": "2026-08-01 10:49:24",
+      "updateTime": ""
     }
   ],
   "grades": [],
@@ -148,7 +161,7 @@
       "major": "软件工程",
       "department": "计算机学院",
       "classTeacher": "张老师",
-      "studentCount": 0,
+      "studentCount": 1,
       "status": "0",
       "createBy": "admin",
       "createTime": "2026-07-27 10:06:19",
@@ -292,13 +305,13 @@
     }
   ],
   "nextId": {
-    "student": 8,
+    "student": 9,
     "grade": 7,
     "dormitory": 7,
     "assignment": 3,
     "class": 4,
     "course": 7,
-    "user": 5
+    "user": 6
   },
   "users": [
     {
@@ -317,6 +330,15 @@
       "displayName": "董一喆",
       "studentId": 4,
       "createTime": "2026-07-28 09:19:54"
+    },
+    {
+      "userId": 5,
+      "username": "2024007",
+      "password": "$2b$10$FoOsJvRU4LF/WOl22erfUuQRC18sU8c7KdSZrF8OpeY4TnKx.AETK",
+      "role": "student",
+      "displayName": "�־û�����",
+      "studentId": 8,
+      "createTime": "2026-08-01 10:49:24"
     }
   ],
   "sessions": {
