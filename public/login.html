@@ -103,6 +103,11 @@ body {
 <script src="/lib/element-ui/lib/index.js"></script>
 <script src="/lib/axios/dist/axios.min.js"></script>
 <script>
+// 修复非 www 域名重定向导致 API 请求丢失 Authorization header 的问题
+if (window.location.hostname === 'ai-college.duckdns.org') {
+  window.location.href = window.location.href.replace('ai-college.duckdns.org', 'www.ai-college.duckdns.org');
+}
+
 var api = axios.create({ baseURL: '/api' });
 
 // 检查是否已登录

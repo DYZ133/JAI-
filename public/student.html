@@ -191,6 +191,11 @@ if (!localStorage.getItem('token') || localStorage.getItem('role') !== 'student'
   window.location.href = '/login.html';
 }
 
+// 修复非 www 域名重定向导致 API 请求丢失 Authorization header 的问题
+if (window.location.hostname === 'ai-college.duckdns.org') {
+  window.location.href = window.location.href.replace('ai-college.duckdns.org', 'www.ai-college.duckdns.org');
+}
+
 var api = axios.create({ baseURL: '/api' });
 // 请求拦截器：自动附加 token
 api.interceptors.request.use(function(config) {

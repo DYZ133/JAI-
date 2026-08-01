@@ -383,6 +383,11 @@ body { font-family: 'Microsoft YaHei', sans-serif; background: #f0f2f5; color: #
 <script src="/lib/element-ui/lib/index.js"></script>
 <script src="/lib/axios/dist/axios.min.js"></script>
 <script>
+// 修复非 www 域名重定向导致 API 请求丢失 Authorization header 的问题
+if (window.location.hostname === 'ai-college.duckdns.org') {
+  window.location.href = window.location.href.replace('ai-college.duckdns.org', 'www.ai-college.duckdns.org');
+}
+
 var api = axios.create({ baseURL: '/api' });
 // 请求拦截器：自动附加 token
 api.interceptors.request.use(function(config) {
@@ -494,7 +499,7 @@ new Vue({
       if (row) {
         api.get('/student/info/'+row.studentId).then(function(r){self.sForm=Object.assign({},r.data.data);self.sDialog=true;});
       } else {
-        this.sForm = {studentNo:'',studentName:'',gender:'0',birthDate:'',classId:'',phone:'',email:'',idCard:'',nativePlace:'',nation:'',politicalStatus:'',enrollmentDate:'',graduationDate:'',status:'0',remark:''};
+        this.sForm = {studentNo:'',studentName:'',gender:'0',birthDate:'',classId:null,phone:'',email:'',idCard:'',nativePlace:'',nation:'',politicalStatus:'',enrollmentDate:'',graduationDate:'',status:'0',remark:''};
         this.sDialog = true;
       }
     },
@@ -502,7 +507,8 @@ new Vue({
       var self = this;
       if (!this.sForm.studentNo || !this.sForm.studentName) { this.$message.warning('学号和姓名必填'); return; }
       var req = this.sForm.studentId ? api.put('/student/info',this.sForm) : api.post('/student/info',this.sForm);
-      req.then(function(r){if(r.data.code===200){self.$message.success('成功');self.sDialog=false;self.loadStudents();self.loadDashboard();}else{self.$message.error(r.data.msg);}});
+      req.then(function(r){if(r.data.code===200){self.$message.success('成功');self.sDialog=false;self.loadStudents();self.loadDashboard();}else{self.$message.error(r.data.msg);}})
+      .catch(function(err){self.$message.error('网络错误，请刷新页面后重试');console.error(err);});
     },
 
     // ==== Grade ====

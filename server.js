@@ -261,7 +261,7 @@ app.get('/api/student/info/all', auth, requireTeacher, (req, res) => {
   res.json({ data: db.students.filter(s => s.status === '0') });
 });
 
-app.get('/api/student/info/:id', (req, res) => {
+app.get('/api/student/info/:id', auth, (req, res) => {
   const db = load();
   const s = db.students.find(x => x.studentId == req.params.id);
   if (s && s.classId) { const c = db.classes.find(x => x.classId == s.classId); s.className = c ? c.className : ''; }
@@ -294,7 +294,7 @@ app.put('/api/student/info', auth, requireTeacher, (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.delete('/api/student/info/:ids', (req, res) => {
+app.delete('/api/student/info/:ids', auth, requireTeacher, (req, res) => {
   const db = load();
   const ids = req.params.ids.split(',').map(Number);
   db.students = db.students.filter(s => !ids.includes(s.studentId));
@@ -368,7 +368,7 @@ app.put('/api/student/grade', auth, requireTeacher, (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.delete('/api/student/grade/:ids', (req, res) => {
+app.delete('/api/student/grade/:ids', auth, requireTeacher, (req, res) => {
   const db = load();
   const ids = req.params.ids.split(',').map(Number);
   db.grades = db.grades.filter(g => !ids.includes(g.gradeId));
@@ -415,7 +415,7 @@ app.put('/api/student/dormitory', auth, requireTeacher, (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.delete('/api/student/dormitory/:ids', (req, res) => {
+app.delete('/api/student/dormitory/:ids', auth, requireTeacher, (req, res) => {
   const db = load();
   const ids = req.params.ids.split(',').map(Number);
   db.dormitories = db.dormitories.filter(d => !ids.includes(d.dormitoryId));
@@ -473,7 +473,7 @@ app.put('/api/student/dormitory/assignment', auth, requireTeacher, (req, res) =>
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.put('/api/student/dormitory/assignment/checkout/:id', (req, res) => {
+app.put('/api/student/dormitory/assignment/checkout/:id', auth, requireTeacher, (req, res) => {
   const db = load();
   const a = db.assignments.find(x => x.assignmentId == req.params.id);
   if (!a || a.isCurrent !== '1') return res.json({ code: 500, msg: '该记录不存在或已退宿' });
@@ -489,7 +489,7 @@ app.put('/api/student/dormitory/assignment/checkout/:id', (req, res) => {
   res.json({ code: 200, msg: '退宿成功' });
 });
 
-app.delete('/api/student/dormitory/assignment/:ids', (req, res) => {
+app.delete('/api/student/dormitory/assignment/:ids', auth, requireTeacher, (req, res) => {
   const db = load();
   const ids = req.params.ids.split(',').map(Number);
   db.assignments = db.assignments.filter(a => !ids.includes(a.assignmentId));
@@ -538,7 +538,7 @@ app.put('/api/student/class', auth, requireTeacher, (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.delete('/api/student/class/:ids', (req, res) => {
+app.delete('/api/student/class/:ids', auth, requireTeacher, (req, res) => {
   const db = load();
   const ids = req.params.ids.split(',').map(Number);
   db.classes = db.classes.filter(c => !ids.includes(c.classId));
@@ -587,7 +587,7 @@ app.put('/api/student/course', auth, requireTeacher, (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.delete('/api/student/course/:ids', (req, res) => {
+app.delete('/api/student/course/:ids', auth, requireTeacher, (req, res) => {
   const db = load();
   const ids = req.params.ids.split(',').map(Number);
   db.courses = db.courses.filter(c => !ids.includes(c.courseId));
