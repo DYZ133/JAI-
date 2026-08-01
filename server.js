@@ -702,6 +702,15 @@ app.delete('/api/student/course/:ids', auth, requireTeacher, (req, res) => {
 });
 
 // ============ 仪表盘统计 ============
+// 同步状态检查
+app.get('/api/dashboard/sync-status', auth, (req, res) => {
+  res.json({
+    githubTokenSet: !!GITHUB_TOKEN,
+    isVercel: IS_VERCEL,
+    syncEnabled: !!(IS_VERCEL && GITHUB_TOKEN)
+  });
+});
+
 app.get('/api/dashboard/stats', auth, (req, res) => {
   const db = load();
   res.json({
