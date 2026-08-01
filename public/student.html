@@ -156,6 +156,69 @@ body { font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif; background: #f
       </table>
       <div class="empty-hint" v-if="grades.length === 0">暂无成绩记录</div>
     </div>
+
+    <!-- 奖惩记录 -->
+    <div class="section">
+      <h3>🏆 奖惩记录（{{ rewards.length }} 条）</h3>
+      <table class="grade-table" v-if="rewards.length > 0">
+        <thead><tr><th>类型</th><th>名称</th><th>级别</th><th>日期</th><th>授予单位</th><th>备注</th></tr></thead>
+        <tbody><tr v-for="r in rewards" :key="r.rewardId">
+          <td><span :class="'tag '+(r.type==='奖励'?'tag-pass':'tag-fail')">{{r.type}}</span></td>
+          <td>{{r.name}}</td><td>{{r.level}}</td><td>{{r.date}}</td><td>{{r.org||'-'}}</td><td>{{r.description||'-'}}</td>
+        </tr></tbody>
+      </table>
+      <div class="empty-hint" v-if="rewards.length === 0">暂无奖惩记录</div>
+    </div>
+
+    <!-- 资助记录 -->
+    <div class="section">
+      <h3>💰 资助记录（{{ aids.length }} 条）</h3>
+      <table class="grade-table" v-if="aids.length > 0">
+        <thead><tr><th>类型</th><th>名称</th><th>金额(元)</th><th>日期</th><th>发放单位</th><th>备注</th></tr></thead>
+        <tbody><tr v-for="r in aids" :key="r.aidId">
+          <td>{{r.type}}</td><td>{{r.name}}</td><td>{{r.amount}}</td><td>{{r.date}}</td><td>{{r.org||'-'}}</td><td>{{r.description||'-'}}</td>
+        </tr></tbody>
+      </table>
+      <div class="empty-hint" v-if="aids.length === 0">暂无资助记录</div>
+    </div>
+
+    <!-- 展赛获奖 -->
+    <div class="section">
+      <h3>🥇 展赛获奖（{{ awards.length }} 项）</h3>
+      <table class="grade-table" v-if="awards.length > 0">
+        <thead><tr><th>竞赛/展览</th><th>获奖名称</th><th>级别</th><th>日期</th><th>主办单位</th><th>备注</th></tr></thead>
+        <tbody><tr v-for="r in awards" :key="r.awardId">
+          <td>{{r.competition}}</td><td>{{r.award}}</td><td><span :class="'tag tag-'+(r.level==='国家级'?'a':r.level==='省级'?'b':'c')">{{r.level}}</span></td>
+          <td>{{r.date}}</td><td>{{r.org||'-'}}</td><td>{{r.description||'-'}}</td>
+        </tr></tbody>
+      </table>
+      <div class="empty-hint" v-if="awards.length === 0">暂无获奖记录</div>
+    </div>
+
+    <!-- 社团经历 -->
+    <div class="section">
+      <h3>🎯 社团经历（{{ clubs.length }} 个）</h3>
+      <table class="grade-table" v-if="clubs.length > 0">
+        <thead><tr><th>社团名称</th><th>担任职务</th><th>加入日期</th><th>离开日期</th><th>备注</th></tr></thead>
+        <tbody><tr v-for="r in clubs" :key="r.clubId">
+          <td>{{r.clubName}}</td><td>{{r.position||'-'}}</td><td>{{r.joinDate||'-'}}</td><td>{{r.leaveDate||'-'}}</td><td>{{r.description||'-'}}</td>
+        </tr></tbody>
+      </table>
+      <div class="empty-hint" v-if="clubs.length === 0">暂无社团记录</div>
+    </div>
+
+    <!-- 学生干部 -->
+    <div class="section">
+      <h3>👔 学生干部（{{ leaderships.length }} 项）</h3>
+      <table class="grade-table" v-if="leaderships.length > 0">
+        <thead><tr><th>类型</th><th>职务</th><th>部门</th><th>任职日期</th><th>卸任日期</th><th>备注</th></tr></thead>
+        <tbody><tr v-for="r in leaderships" :key="r.leadershipId">
+          <td><span :class="'tag tag-'+(r.type==='班级干部'?'a':r.type==='团委'?'c':'b')">{{r.type}}</span></td>
+          <td>{{r.position}}</td><td>{{r.department||'-'}}</td><td>{{r.startDate||'-'}}</td><td>{{r.endDate||'-'}}</td><td>{{r.description||'-'}}</td>
+        </tr></tbody>
+      </table>
+      <div class="empty-hint" v-if="leaderships.length === 0">暂无干部任职记录</div>
+    </div>
   </div>
 
   <!-- 加载中 -->
@@ -218,6 +281,7 @@ new Vue({
     student: {},
     grades: [],
     dormitory: null,
+    rewards: [], aids: [], awards: [], clubs: [], leaderships: [],
     loading: true,
     changePwdDialog: false,
     pwdForm: { oldPassword: '', newPassword: '' },
@@ -263,11 +327,21 @@ new Vue({
       Promise.all([
         api.get('/student/self/profile'),
         api.get('/student/self/grades'),
-        api.get('/student/self/dormitory')
+        api.get('/student/self/dormitory'),
+        api.get('/student/self/rewards'),
+        api.get('/student/self/aids'),
+        api.get('/student/self/awards'),
+        api.get('/student/self/clubs'),
+        api.get('/student/self/leaderships')
       ]).then(function(results) {
         self.student = results[0].data.data || {};
         self.grades = results[1].data.data || [];
         self.dormitory = results[2].data.data;
+        self.rewards = results[3].data.data || [];
+        self.aids = results[4].data.data || [];
+        self.awards = results[5].data.data || [];
+        self.clubs = results[6].data.data || [];
+        self.leaderships = results[7].data.data || [];
         self.loading = false;
       }).catch(function() {
         self.loading = false;
