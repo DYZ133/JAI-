@@ -340,7 +340,12 @@
     "assignment": 3,
     "class": 4,
     "course": 7,
-    "user": 8
+    "user": 8,
+    "reward": 1,
+    "aid": 1,
+    "award": 1,
+    "club": 1,
+    "leadership": 1
   },
   "users": [
     {
@@ -429,5 +434,10 @@
       "studentId": null,
       "expiresAt": 1785893152631
     }
-  }
+  },
+  "rewards": [],
+  "aids": [],
+  "awards": [],
+  "clubs": [],
+  "leaderships": []
 }
