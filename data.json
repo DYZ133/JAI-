@@ -20,6 +20,27 @@
       "className": "",
       "createTime": "2026-07-27 10:20:39",
       "updateTime": ""
+    },
+    {
+      "studentNo": "123456",
+      "studentName": "崔宇博",
+      "gender": "0",
+      "birthDate": "",
+      "classId": null,
+      "phone": "",
+      "email": "",
+      "idCard": "",
+      "nativePlace": "",
+      "nation": "",
+      "politicalStatus": "",
+      "enrollmentDate": "",
+      "graduationDate": "",
+      "status": "0",
+      "remark": "",
+      "studentId": 9,
+      "className": "",
+      "createTime": "2026-08-01 10:50:42",
+      "updateTime": ""
     }
   ],
   "grades": [],
@@ -292,13 +313,13 @@
     }
   ],
   "nextId": {
-    "student": 9,
+    "student": 10,
     "grade": 7,
     "dormitory": 7,
     "assignment": 3,
     "class": 4,
     "course": 7,
-    "user": 6
+    "user": 7
   },
   "users": [
     {
@@ -326,6 +347,15 @@
       "displayName": "�־û�����",
       "studentId": 8,
       "createTime": "2026-08-01 10:49:24"
+    },
+    {
+      "userId": 6,
+      "username": "123456",
+      "password": "$2b$10$fLgCXpo5dGB0bdESwX8qfOiSMh9/VjGfc9eNiuE8nTMiZwXHuvyUS",
+      "role": "student",
+      "displayName": "崔宇博",
+      "studentId": 9,
+      "createTime": "2026-08-01 10:50:42"
     }
   ],
   "sessions": {
