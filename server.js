@@ -260,7 +260,7 @@ function now() {
 
 function seed(db) {
   // 24个班级：23级~26级，每级6个班
-  const grades = ['2023级', '2024级', '2025级', '2026级'];
+  const gradeYears = ['2023级', '2024级', '2025级', '2026级'];
   const classDefs = [
     { suffix: '技术1班', major: '人工智能技术' },
     { suffix: '技术2班', major: '人工智能技术' },
@@ -269,7 +269,7 @@ function seed(db) {
     { suffix: '虚拟现实1班', major: '虚拟现实技术' },
     { suffix: '软件1班', major: '软件技术' }
   ];
-  grades.forEach(g => {
+  gradeYears.forEach(g => {
     classDefs.forEach(cd => {
       db.classes.push({
         classId: nextId(db, 'class'),
