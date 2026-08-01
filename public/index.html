@@ -53,6 +53,12 @@ body { font-family: 'Microsoft YaHei', sans-serif; background: #f0f2f5; color: #
       <div class="menu-item" :class="{active: page==='dormitory'}" @click="page='dormitory'">🏠 宿舍管理</div>
       <div class="menu-item" :class="{active: page==='class'}" @click="page='class'">🏫 班级管理</div>
       <div class="menu-item" :class="{active: page==='course'}" @click="page='course'">📚 课程管理</div>
+      <div class="menu-group-title">综合素质</div>
+      <div class="menu-item" :class="{active: page==='reward'}" @click="page='reward'">🏆 奖惩记录</div>
+      <div class="menu-item" :class="{active: page==='aid'}" @click="page='aid'">💰 资助记录</div>
+      <div class="menu-item" :class="{active: page==='award'}" @click="page='award'">🥇 展赛获奖</div>
+      <div class="menu-item" :class="{active: page==='club'}" @click="page='club'">🎯 社团经历</div>
+      <div class="menu-item" :class="{active: page==='leadership'}" @click="page='leadership'">👔 学生干部</div>
     </div>
     <div class="main-content">
 
@@ -288,6 +294,135 @@ body { font-family: 'Microsoft YaHei', sans-serif; background: #f0f2f5; color: #
         </div>
       </div>
 
+      <!-- 奖惩记录 -->
+      <div v-if="page==='reward'">
+        <div class="card-box">
+          <div class="toolbar">
+            <el-input v-model="rwQuery.studentNo" placeholder="学号" size="small" style="width:110px" clearable @keyup.enter="loadRewards"></el-input>
+            <el-input v-model="rwQuery.studentName" placeholder="姓名" size="small" style="width:100px" clearable @keyup.enter="loadRewards"></el-input>
+            <el-select v-model="rwQuery.type" placeholder="类型" size="small" style="width:100px" clearable @change="loadRewards"><el-option label="奖励" value="奖励"></el-option><el-option label="惩罚" value="惩罚"></el-option></el-select>
+            <el-button type="primary" size="small" icon="el-icon-search" @click="loadRewards">搜索</el-button>
+            <el-button size="small" icon="el-icon-plus" @click="openRewardDialog()">新增</el-button>
+            <el-button size="small" type="danger" icon="el-icon-delete" :disabled="rwSelected.length===0" @click="deleteSelected('reward')">删除</el-button>
+          </div>
+          <el-table :data="rwList" size="small" @selection-change="s=>rwSelected=s">
+            <el-table-column type="selection" width="45"></el-table-column>
+            <el-table-column prop="studentNo" label="学号" width="100"></el-table-column>
+            <el-table-column prop="studentName" label="姓名" width="80"></el-table-column>
+            <el-table-column label="类型" width="70"><template slot-scope="s"><el-tag :type="s.row.type==='奖励'?'success':'danger'" size="small">{{s.row.type}}</el-tag></template></el-table-column>
+            <el-table-column prop="name" label="名称"></el-table-column>
+            <el-table-column prop="level" label="级别" width="90"></el-table-column>
+            <el-table-column prop="date" label="日期" width="100"></el-table-column>
+            <el-table-column prop="org" label="授予单位" width="140"></el-table-column>
+            <el-table-column label="操作" width="120"><template slot-scope="s"><el-button type="text" size="mini" @click="openRewardDialog(s.row)">编辑</el-button><el-button type="text" size="mini" style="color:#f56c6c" @click="del('reward',s.row.rewardId)">删除</el-button></template></el-table-column>
+          </el-table>
+          <el-pagination style="margin-top:12px;text-align:right" :current-page="rwPage.pageNum" :page-sizes="[10,20,50]" :page-size="rwPage.pageSize" :total="rwPage.total" layout="total,sizes,prev,pager,next" @size-change="s=>{rwPage.pageSize=s;loadRewards()}" @current-change="s=>{rwPage.pageNum=s;loadRewards()}"></el-pagination>
+        </div>
+      </div>
+
+      <!-- 资助记录 -->
+      <div v-if="page==='aid'">
+        <div class="card-box">
+          <div class="toolbar">
+            <el-input v-model="adQuery.studentNo" placeholder="学号" size="small" style="width:110px" clearable @keyup.enter="loadAids"></el-input>
+            <el-input v-model="adQuery.studentName" placeholder="姓名" size="small" style="width:100px" clearable @keyup.enter="loadAids"></el-input>
+            <el-select v-model="adQuery.type" placeholder="类型" size="small" style="width:100px" clearable @change="loadAids"><el-option label="助学金" value="助学金"></el-option><el-option label="奖学金" value="奖学金"></el-option><el-option label="助学贷款" value="助学贷款"></el-option><el-option label="困难补助" value="困难补助"></el-option><el-option label="勤工助学" value="勤工助学"></el-option></el-select>
+            <el-button type="primary" size="small" icon="el-icon-search" @click="loadAids">搜索</el-button>
+            <el-button size="small" icon="el-icon-plus" @click="openAidDialog()">新增</el-button>
+            <el-button size="small" type="danger" icon="el-icon-delete" :disabled="adSelected.length===0" @click="deleteSelected('aid')">删除</el-button>
+          </div>
+          <el-table :data="adList" size="small" @selection-change="s=>adSelected=s">
+            <el-table-column type="selection" width="45"></el-table-column>
+            <el-table-column prop="studentNo" label="学号" width="100"></el-table-column>
+            <el-table-column prop="studentName" label="姓名" width="80"></el-table-column>
+            <el-table-column prop="type" label="类型" width="90"></el-table-column>
+            <el-table-column prop="name" label="名称"></el-table-column>
+            <el-table-column prop="amount" label="金额(元)" width="90"></el-table-column>
+            <el-table-column prop="date" label="日期" width="100"></el-table-column>
+            <el-table-column prop="org" label="发放单位" width="140"></el-table-column>
+            <el-table-column label="操作" width="120"><template slot-scope="s"><el-button type="text" size="mini" @click="openAidDialog(s.row)">编辑</el-button><el-button type="text" size="mini" style="color:#f56c6c" @click="del('aid',s.row.aidId)">删除</el-button></template></el-table-column>
+          </el-table>
+          <el-pagination style="margin-top:12px;text-align:right" :current-page="adPage.pageNum" :page-sizes="[10,20,50]" :page-size="adPage.pageSize" :total="adPage.total" layout="total,sizes,prev,pager,next" @size-change="s=>{adPage.pageSize=s;loadAids()}" @current-change="s=>{adPage.pageNum=s;loadAids()}"></el-pagination>
+        </div>
+      </div>
+
+      <!-- 展赛获奖 -->
+      <div v-if="page==='award'">
+        <div class="card-box">
+          <div class="toolbar">
+            <el-input v-model="awQuery.studentNo" placeholder="学号" size="small" style="width:110px" clearable @keyup.enter="loadAwards"></el-input>
+            <el-input v-model="awQuery.studentName" placeholder="姓名" size="small" style="width:100px" clearable @keyup.enter="loadAwards"></el-input>
+            <el-select v-model="awQuery.level" placeholder="获奖级别" size="small" style="width:110px" clearable @change="loadAwards"><el-option label="国家级" value="国家级"></el-option><el-option label="省级" value="省级"></el-option><el-option label="市级" value="市级"></el-option><el-option label="校级" value="校级"></el-option><el-option label="院级" value="院级"></el-option></el-select>
+            <el-button type="primary" size="small" icon="el-icon-search" @click="loadAwards">搜索</el-button>
+            <el-button size="small" icon="el-icon-plus" @click="openAwardDialog()">新增</el-button>
+            <el-button size="small" type="danger" icon="el-icon-delete" :disabled="awSelected.length===0" @click="deleteSelected('award')">删除</el-button>
+          </div>
+          <el-table :data="awList" size="small" @selection-change="s=>awSelected=s">
+            <el-table-column type="selection" width="45"></el-table-column>
+            <el-table-column prop="studentNo" label="学号" width="100"></el-table-column>
+            <el-table-column prop="studentName" label="姓名" width="80"></el-table-column>
+            <el-table-column prop="competition" label="竞赛/展览" width="150"></el-table-column>
+            <el-table-column prop="award" label="获奖名称"></el-table-column>
+            <el-table-column prop="level" label="级别" width="80"></el-table-column>
+            <el-table-column prop="date" label="日期" width="100"></el-table-column>
+            <el-table-column prop="org" label="主办单位" width="140"></el-table-column>
+            <el-table-column label="操作" width="120"><template slot-scope="s"><el-button type="text" size="mini" @click="openAwardDialog(s.row)">编辑</el-button><el-button type="text" size="mini" style="color:#f56c6c" @click="del('award',s.row.awardId)">删除</el-button></template></el-table-column>
+          </el-table>
+          <el-pagination style="margin-top:12px;text-align:right" :current-page="awPage.pageNum" :page-sizes="[10,20,50]" :page-size="awPage.pageSize" :total="awPage.total" layout="total,sizes,prev,pager,next" @size-change="s=>{awPage.pageSize=s;loadAwards()}" @current-change="s=>{awPage.pageNum=s;loadAwards()}"></el-pagination>
+        </div>
+      </div>
+
+      <!-- 社团经历 -->
+      <div v-if="page==='club'">
+        <div class="card-box">
+          <div class="toolbar">
+            <el-input v-model="cbQuery.studentNo" placeholder="学号" size="small" style="width:110px" clearable @keyup.enter="loadClubs"></el-input>
+            <el-input v-model="cbQuery.studentName" placeholder="姓名" size="small" style="width:100px" clearable @keyup.enter="loadClubs"></el-input>
+            <el-input v-model="cbQuery.clubName" placeholder="社团名称" size="small" style="width:130px" clearable @keyup.enter="loadClubs"></el-input>
+            <el-button type="primary" size="small" icon="el-icon-search" @click="loadClubs">搜索</el-button>
+            <el-button size="small" icon="el-icon-plus" @click="openClubDialog()">新增</el-button>
+            <el-button size="small" type="danger" icon="el-icon-delete" :disabled="cbSelected.length===0" @click="deleteSelected('club')">删除</el-button>
+          </div>
+          <el-table :data="cbList" size="small" @selection-change="s=>cbSelected=s">
+            <el-table-column type="selection" width="45"></el-table-column>
+            <el-table-column prop="studentNo" label="学号" width="100"></el-table-column>
+            <el-table-column prop="studentName" label="姓名" width="80"></el-table-column>
+            <el-table-column prop="clubName" label="社团名称" width="140"></el-table-column>
+            <el-table-column prop="position" label="担任职务" width="100"></el-table-column>
+            <el-table-column prop="joinDate" label="加入日期" width="100"></el-table-column>
+            <el-table-column prop="leaveDate" label="离开日期" width="100"></el-table-column>
+            <el-table-column label="操作" width="120"><template slot-scope="s"><el-button type="text" size="mini" @click="openClubDialog(s.row)">编辑</el-button><el-button type="text" size="mini" style="color:#f56c6c" @click="del('club',s.row.clubId)">删除</el-button></template></el-table-column>
+          </el-table>
+          <el-pagination style="margin-top:12px;text-align:right" :current-page="cbPage.pageNum" :page-sizes="[10,20,50]" :page-size="cbPage.pageSize" :total="cbPage.total" layout="total,sizes,prev,pager,next" @size-change="s=>{cbPage.pageSize=s;loadClubs()}" @current-change="s=>{cbPage.pageNum=s;loadClubs()}"></el-pagination>
+        </div>
+      </div>
+
+      <!-- 学生干部 -->
+      <div v-if="page==='leadership'">
+        <div class="card-box">
+          <div class="toolbar">
+            <el-input v-model="ldQuery.studentNo" placeholder="学号" size="small" style="width:110px" clearable @keyup.enter="loadLeaderships"></el-input>
+            <el-input v-model="ldQuery.studentName" placeholder="姓名" size="small" style="width:100px" clearable @keyup.enter="loadLeaderships"></el-input>
+            <el-select v-model="ldQuery.type" placeholder="类型" size="small" style="width:120px" clearable @change="loadLeaderships"><el-option label="班级干部" value="班级干部"></el-option><el-option label="团委" value="团委"></el-option><el-option label="学生会" value="学生会"></el-option></el-select>
+            <el-button type="primary" size="small" icon="el-icon-search" @click="loadLeaderships">搜索</el-button>
+            <el-button size="small" icon="el-icon-plus" @click="openLeadershipDialog()">新增</el-button>
+            <el-button size="small" type="danger" icon="el-icon-delete" :disabled="ldSelected.length===0" @click="deleteSelected('leadership')">删除</el-button>
+          </div>
+          <el-table :data="ldList" size="small" @selection-change="s=>ldSelected=s">
+            <el-table-column type="selection" width="45"></el-table-column>
+            <el-table-column prop="studentNo" label="学号" width="100"></el-table-column>
+            <el-table-column prop="studentName" label="姓名" width="80"></el-table-column>
+            <el-table-column label="类型" width="90"><template slot-scope="s"><el-tag :type="s.row.type==='班级干部'?'':s.row.type==='团委'?'danger':'primary'" size="small">{{s.row.type}}</el-tag></template></el-table-column>
+            <el-table-column prop="position" label="职务" width="120"></el-table-column>
+            <el-table-column prop="department" label="部门" width="120"></el-table-column>
+            <el-table-column prop="startDate" label="任职日期" width="100"></el-table-column>
+            <el-table-column prop="endDate" label="卸任日期" width="100"></el-table-column>
+            <el-table-column label="操作" width="120"><template slot-scope="s"><el-button type="text" size="mini" @click="openLeadershipDialog(s.row)">编辑</el-button><el-button type="text" size="mini" style="color:#f56c6c" @click="del('leadership',s.row.leadershipId)">删除</el-button></template></el-table-column>
+          </el-table>
+          <el-pagination style="margin-top:12px;text-align:right" :current-page="ldPage.pageNum" :page-sizes="[10,20,50]" :page-size="ldPage.pageSize" :total="ldPage.total" layout="total,sizes,prev,pager,next" @size-change="s=>{ldPage.pageSize=s;loadLeaderships()}" @current-change="s=>{ldPage.pageNum=s;loadLeaderships()}"></el-pagination>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -380,6 +515,70 @@ body { font-family: 'Microsoft YaHei', sans-serif; background: #f0f2f5; color: #
     <el-form-item label="备注"><el-input v-model="coForm.remark" type="textarea"></el-input></el-form-item>
   </el-form><div slot="footer"><el-button @click="coDialog=false">取消</el-button><el-button type="primary" @click="saveCourse">确定</el-button></div></el-dialog>
 
+  <!-- 奖惩弹窗 -->
+  <el-dialog :title="rwForm.rewardId?'修改奖惩':'新增奖惩'" :visible.sync="rwDialog" width="520px"><el-form :model="rwForm" label-width="100px" size="small">
+    <el-form-item label="学生"><el-select v-model="rwForm.studentId" filterable placeholder="选择学生" style="width:100%"><el-option v-for="s in allStudents" :key="s.studentId" :label="s.studentName+' ('+s.studentNo+')'" :value="s.studentId"></el-option></el-select></el-form-item>
+    <el-row :gutter="14">
+      <el-col :span="12"><el-form-item label="类型"><el-select v-model="rwForm.type" style="width:100%"><el-option label="奖励" value="奖励"></el-option><el-option label="惩罚" value="惩罚"></el-option></el-select></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="级别"><el-select v-model="rwForm.level" style="width:100%"><el-option label="国家级" value="国家级"></el-option><el-option label="省级" value="省级"></el-option><el-option label="市级" value="市级"></el-option><el-option label="校级" value="校级"></el-option><el-option label="院级" value="院级"></el-option></el-select></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="名称"><el-input v-model="rwForm.name"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="日期"><el-input v-model="rwForm.date" type="date"></el-input></el-form-item></el-col>
+      <el-col :span="24"><el-form-item label="授予单位"><el-input v-model="rwForm.org"></el-input></el-form-item></el-col>
+    </el-row>
+    <el-form-item label="备注"><el-input v-model="rwForm.description" type="textarea"></el-input></el-form-item>
+  </el-form><div slot="footer"><el-button @click="rwDialog=false">取消</el-button><el-button type="primary" @click="saveReward">确定</el-button></div></el-dialog>
+
+  <!-- 资助弹窗 -->
+  <el-dialog :title="adForm.aidId?'修改资助':'新增资助'" :visible.sync="adDialog" width="520px"><el-form :model="adForm" label-width="100px" size="small">
+    <el-form-item label="学生"><el-select v-model="adForm.studentId" filterable placeholder="选择学生" style="width:100%"><el-option v-for="s in allStudents" :key="s.studentId" :label="s.studentName+' ('+s.studentNo+')'" :value="s.studentId"></el-option></el-select></el-form-item>
+    <el-row :gutter="14">
+      <el-col :span="12"><el-form-item label="类型"><el-select v-model="adForm.type" style="width:100%"><el-option label="助学金" value="助学金"></el-option><el-option label="奖学金" value="奖学金"></el-option><el-option label="助学贷款" value="助学贷款"></el-option><el-option label="困难补助" value="困难补助"></el-option><el-option label="勤工助学" value="勤工助学"></el-option></el-select></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="金额(元)"><el-input-number v-model="adForm.amount" :min="0" :precision="2" style="width:100%"></el-input-number></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="名称"><el-input v-model="adForm.name"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="日期"><el-input v-model="adForm.date" type="date"></el-input></el-form-item></el-col>
+      <el-col :span="24"><el-form-item label="发放单位"><el-input v-model="adForm.org"></el-input></el-form-item></el-col>
+    </el-row>
+    <el-form-item label="备注"><el-input v-model="adForm.description" type="textarea"></el-input></el-form-item>
+  </el-form><div slot="footer"><el-button @click="adDialog=false">取消</el-button><el-button type="primary" @click="saveAid">确定</el-button></div></el-dialog>
+
+  <!-- 获奖弹窗 -->
+  <el-dialog :title="awForm.awardId?'修改获奖':'新增获奖'" :visible.sync="awDialog" width="520px"><el-form :model="awForm" label-width="100px" size="small">
+    <el-form-item label="学生"><el-select v-model="awForm.studentId" filterable placeholder="选择学生" style="width:100%"><el-option v-for="s in allStudents" :key="s.studentId" :label="s.studentName+' ('+s.studentNo+')'" :value="s.studentId"></el-option></el-select></el-form-item>
+    <el-row :gutter="14">
+      <el-col :span="12"><el-form-item label="竞赛/展览"><el-input v-model="awForm.competition"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="获奖名称"><el-input v-model="awForm.award"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="级别"><el-select v-model="awForm.level" style="width:100%"><el-option label="国家级" value="国家级"></el-option><el-option label="省级" value="省级"></el-option><el-option label="市级" value="市级"></el-option><el-option label="校级" value="校级"></el-option><el-option label="院级" value="院级"></el-option></el-select></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="日期"><el-input v-model="awForm.date" type="date"></el-input></el-form-item></el-col>
+      <el-col :span="24"><el-form-item label="主办单位"><el-input v-model="awForm.org"></el-input></el-form-item></el-col>
+    </el-row>
+    <el-form-item label="备注"><el-input v-model="awForm.description" type="textarea"></el-input></el-form-item>
+  </el-form><div slot="footer"><el-button @click="awDialog=false">取消</el-button><el-button type="primary" @click="saveAward">确定</el-button></div></el-dialog>
+
+  <!-- 社团弹窗 -->
+  <el-dialog :title="cbForm.clubId?'修改社团经历':'新增社团经历'" :visible.sync="cbDialog" width="520px"><el-form :model="cbForm" label-width="100px" size="small">
+    <el-form-item label="学生"><el-select v-model="cbForm.studentId" filterable placeholder="选择学生" style="width:100%"><el-option v-for="s in allStudents" :key="s.studentId" :label="s.studentName+' ('+s.studentNo+')'" :value="s.studentId"></el-option></el-select></el-form-item>
+    <el-row :gutter="14">
+      <el-col :span="12"><el-form-item label="社团名称"><el-input v-model="cbForm.clubName"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="担任职务"><el-input v-model="cbForm.position"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="加入日期"><el-input v-model="cbForm.joinDate" type="date"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="离开日期"><el-input v-model="cbForm.leaveDate" type="date"></el-input></el-form-item></el-col>
+    </el-row>
+    <el-form-item label="备注"><el-input v-model="cbForm.description" type="textarea"></el-input></el-form-item>
+  </el-form><div slot="footer"><el-button @click="cbDialog=false">取消</el-button><el-button type="primary" @click="saveClub">确定</el-button></div></el-dialog>
+
+  <!-- 学生干部弹窗 -->
+  <el-dialog :title="ldForm.leadershipId?'修改干部任职':'新增干部任职'" :visible.sync="ldDialog" width="520px"><el-form :model="ldForm" label-width="100px" size="small">
+    <el-form-item label="学生"><el-select v-model="ldForm.studentId" filterable placeholder="选择学生" style="width:100%"><el-option v-for="s in allStudents" :key="s.studentId" :label="s.studentName+' ('+s.studentNo+')'" :value="s.studentId"></el-option></el-select></el-form-item>
+    <el-row :gutter="14">
+      <el-col :span="12"><el-form-item label="类型"><el-select v-model="ldForm.type" style="width:100%"><el-option label="班级干部" value="班级干部"></el-option><el-option label="团委" value="团委"></el-option><el-option label="学生会" value="学生会"></el-option></el-select></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="职务"><el-input v-model="ldForm.position"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="部门"><el-input v-model="ldForm.department"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="任职日期"><el-input v-model="ldForm.startDate" type="date"></el-input></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="卸任日期"><el-input v-model="ldForm.endDate" type="date"></el-input></el-form-item></el-col>
+    </el-row>
+    <el-form-item label="备注"><el-input v-model="ldForm.description" type="textarea"></el-input></el-form-item>
+  </el-form><div slot="footer"><el-button @click="ldDialog=false">取消</el-button><el-button type="primary" @click="saveLeadership">确定</el-button></div></el-dialog>
+
   <!-- 成绩查看弹窗 -->
   <el-dialog :title="gradeViewStudent.studentName+' 的成绩单'" :visible.sync="gradeViewDialog" width="800px">
     <el-table :data="gradeViewList" size="small"><el-table-column prop="courseName" label="课程"></el-table-column><el-table-column prop="score" label="分数" width="70"></el-table-column><el-table-column prop="gradePoint" label="绩点" width="60"></el-table-column><el-table-column label="等级" width="70"><template slot-scope="s"><el-tag :type="levelTag(s.row.gradeLevel)" size="small">{{s.row.gradeLevel}}</el-tag></template></el-table-column><el-table-column prop="semester" label="学期" width="110"></el-table-column><el-table-column prop="examType" label="类型" width="60"></el-table-column><el-table-column label="通过" width="60"><template slot-scope="s"><span :style="{color:s.row.isPassed==='1'?'#52c41a':'#f5222d'}">{{s.row.isPassed==='1'?'是':'否'}}</span></template></el-table-column></el-table>
@@ -464,7 +663,27 @@ new Vue({
     // Course
     coList:[], coSelected:[], coPage:{pageNum:1,pageSize:10,total:0},
     coQuery:{courseName:'',courseType:'',teacher:''},
-    coDialog:false, coForm:{}
+    coDialog:false, coForm:{},
+    // 奖惩
+    rwList:[], rwSelected:[], rwPage:{pageNum:1,pageSize:10,total:0},
+    rwQuery:{studentNo:'',studentName:'',type:''},
+    rwDialog:false, rwForm:{},
+    // 资助
+    adList:[], adSelected:[], adPage:{pageNum:1,pageSize:10,total:0},
+    adQuery:{studentNo:'',studentName:'',type:''},
+    adDialog:false, adForm:{},
+    // 获奖
+    awList:[], awSelected:[], awPage:{pageNum:1,pageSize:10,total:0},
+    awQuery:{studentNo:'',studentName:'',level:''},
+    awDialog:false, awForm:{},
+    // 社团
+    cbList:[], cbSelected:[], cbPage:{pageNum:1,pageSize:10,total:0},
+    cbQuery:{studentNo:'',studentName:'',clubName:''},
+    cbDialog:false, cbForm:{},
+    // 干部
+    ldList:[], ldSelected:[], ldPage:{pageNum:1,pageSize:10,total:0},
+    ldQuery:{studentNo:'',studentName:'',type:''},
+    ldDialog:false, ldForm:{}
   },
   computed: {
     recentStudents: function() { return this.sList.slice(0, 5); }
@@ -486,6 +705,11 @@ new Vue({
       else if (val === 'dormitory') { this.loadDormitories(); this.loadAssignments(); }
       else if (val === 'class') this.loadClasses();
       else if (val === 'course') this.loadCourses();
+      else if (val === 'reward') this.loadRewards();
+      else if (val === 'aid') this.loadAids();
+      else if (val === 'award') this.loadAwards();
+      else if (val === 'club') this.loadClubs();
+      else if (val === 'leadership') this.loadLeaderships();
       else if (val === 'dashboard') this.loadDashboard();
     }
   },
@@ -630,16 +854,101 @@ new Vue({
       req.then(function(r){if(r.data.code===200){self.$message.success('成功');self.coDialog=false;self.loadCourses();}else{self.$message.error(r.data.msg);}});
     },
 
+    // ==== 奖惩 ====
+    loadRewards: function() {
+      var self = this;
+      api.get('/student/reward/list',{params:Object.assign({},this.rwPage,this.rwQuery)}).then(function(r){self.rwList=r.data.rows||[];self.rwPage.total=r.data.total||0;});
+    },
+    openRewardDialog: function(row) {
+      var self = this;
+      if (row) { api.get('/student/reward/'+row.rewardId).then(function(r){self.rwForm=Object.assign({},r.data.data);self.rwDialog=true;}); }
+      else { this.rwForm = {studentId:'',type:'奖励',name:'',level:'校级',date:'',org:'',description:''}; this.rwDialog = true; }
+    },
+    saveReward: function() {
+      var self = this;
+      if (!this.rwForm.studentId || !this.rwForm.name) { this.$message.warning('请选择学生并填写名称'); return; }
+      var req = this.rwForm.rewardId ? api.put('/student/reward',this.rwForm) : api.post('/student/reward',this.rwForm);
+      req.then(function(r){if(r.data.code===200){self.$message.success('成功');self.rwDialog=false;self.loadRewards();}else{self.$message.error(r.data.msg);}}).catch(function(){self.$message.error('网络错误');});
+    },
+
+    // ==== 资助 ====
+    loadAids: function() {
+      var self = this;
+      api.get('/student/aid/list',{params:Object.assign({},this.adPage,this.adQuery)}).then(function(r){self.adList=r.data.rows||[];self.adPage.total=r.data.total||0;});
+    },
+    openAidDialog: function(row) {
+      var self = this;
+      if (row) { api.get('/student/aid/'+row.aidId).then(function(r){self.adForm=Object.assign({},r.data.data);self.adDialog=true;}); }
+      else { this.adForm = {studentId:'',type:'助学金',name:'',amount:undefined,date:'',org:'',description:''}; this.adDialog = true; }
+    },
+    saveAid: function() {
+      var self = this;
+      if (!this.adForm.studentId || !this.adForm.name) { this.$message.warning('请选择学生并填写名称'); return; }
+      var req = this.adForm.aidId ? api.put('/student/aid',this.adForm) : api.post('/student/aid',this.adForm);
+      req.then(function(r){if(r.data.code===200){self.$message.success('成功');self.adDialog=false;self.loadAids();}else{self.$message.error(r.data.msg);}}).catch(function(){self.$message.error('网络错误');});
+    },
+
+    // ==== 获奖 ====
+    loadAwards: function() {
+      var self = this;
+      api.get('/student/award/list',{params:Object.assign({},this.awPage,this.awQuery)}).then(function(r){self.awList=r.data.rows||[];self.awPage.total=r.data.total||0;});
+    },
+    openAwardDialog: function(row) {
+      var self = this;
+      if (row) { api.get('/student/award/'+row.awardId).then(function(r){self.awForm=Object.assign({},r.data.data);self.awDialog=true;}); }
+      else { this.awForm = {studentId:'',competition:'',award:'',level:'校级',date:'',org:'',description:''}; this.awDialog = true; }
+    },
+    saveAward: function() {
+      var self = this;
+      if (!this.awForm.studentId || !this.awForm.award) { this.$message.warning('请选择学生并填写获奖名称'); return; }
+      var req = this.awForm.awardId ? api.put('/student/award',this.awForm) : api.post('/student/award',this.awForm);
+      req.then(function(r){if(r.data.code===200){self.$message.success('成功');self.awDialog=false;self.loadAwards();}else{self.$message.error(r.data.msg);}}).catch(function(){self.$message.error('网络错误');});
+    },
+
+    // ==== 社团 ====
+    loadClubs: function() {
+      var self = this;
+      api.get('/student/club/list',{params:Object.assign({},this.cbPage,this.cbQuery)}).then(function(r){self.cbList=r.data.rows||[];self.cbPage.total=r.data.total||0;});
+    },
+    openClubDialog: function(row) {
+      var self = this;
+      if (row) { api.get('/student/club/'+row.clubId).then(function(r){self.cbForm=Object.assign({},r.data.data);self.cbDialog=true;}); }
+      else { this.cbForm = {studentId:'',clubName:'',position:'',joinDate:'',leaveDate:'',description:''}; this.cbDialog = true; }
+    },
+    saveClub: function() {
+      var self = this;
+      if (!this.cbForm.studentId || !this.cbForm.clubName) { this.$message.warning('请选择学生并填写社团名称'); return; }
+      var req = this.cbForm.clubId ? api.put('/student/club',this.cbForm) : api.post('/student/club',this.cbForm);
+      req.then(function(r){if(r.data.code===200){self.$message.success('成功');self.cbDialog=false;self.loadClubs();}else{self.$message.error(r.data.msg);}}).catch(function(){self.$message.error('网络错误');});
+    },
+
+    // ==== 干部 ====
+    loadLeaderships: function() {
+      var self = this;
+      api.get('/student/leadership/list',{params:Object.assign({},this.ldPage,this.ldQuery)}).then(function(r){self.ldList=r.data.rows||[];self.ldPage.total=r.data.total||0;});
+    },
+    openLeadershipDialog: function(row) {
+      var self = this;
+      if (row) { api.get('/student/leadership/'+row.leadershipId).then(function(r){self.ldForm=Object.assign({},r.data.data);self.ldDialog=true;}); }
+      else { this.ldForm = {studentId:'',type:'班级干部',position:'',department:'',startDate:'',endDate:'',description:''}; this.ldDialog = true; }
+    },
+    saveLeadership: function() {
+      var self = this;
+      if (!this.ldForm.studentId || !this.ldForm.position) { this.$message.warning('请选择学生并填写职务'); return; }
+      var req = this.ldForm.leadershipId ? api.put('/student/leadership',this.ldForm) : api.post('/student/leadership',this.ldForm);
+      req.then(function(r){if(r.data.code===200){self.$message.success('成功');self.ldDialog=false;self.loadLeaderships();}else{self.$message.error(r.data.msg);}}).catch(function(){self.$message.error('网络错误');});
+    },
+
     // ==== 通用 ====
     del: function(type, id) {
       var self = this;
-      var urls = {student:'/student/info/',grade:'/student/grade/',dormitory:'/student/dormitory/',assignment:'/student/dormitory/assignment/',class:'/student/class/',course:'/student/course/'};
+      var urls = {student:'/student/info/',grade:'/student/grade/',dormitory:'/student/dormitory/',assignment:'/student/dormitory/assignment/',class:'/student/class/',course:'/student/course/',reward:'/student/reward/',aid:'/student/aid/',award:'/student/award/',club:'/student/club/',leadership:'/student/leadership/'};
       this.$confirm('确认删除？').then(function(){return api.delete(urls[type]+id);}).then(function(){self.$message.success('删除成功');
-        if(type==='student'){self.loadStudents();self.loadDashboard();}else if(type==='grade'){self.loadGrades();self.loadDashboard();}else if(type==='dormitory')self.loadDormitories();else if(type==='assignment')self.loadAssignments();else if(type==='class')self.loadClasses();else if(type==='course')self.loadCourses();
+        if(type==='student'){self.loadStudents();self.loadDashboard();}else if(type==='grade'){self.loadGrades();self.loadDashboard();}else if(type==='dormitory')self.loadDormitories();else if(type==='assignment')self.loadAssignments();else if(type==='class')self.loadClasses();else if(type==='course')self.loadCourses();else if(type==='reward')self.loadRewards();else if(type==='aid')self.loadAids();else if(type==='award')self.loadAwards();else if(type==='club')self.loadClubs();else if(type==='leadership')self.loadLeaderships();
       }).catch(function(){});
     },
     deleteSelected: function(type) {
-      var map = {student:['sSelected','studentId'],grade:['gSelected','gradeId'],dormitory:['dSelected','dormitoryId'],assignment:['aSelected','assignmentId'],class:['cSelected','classId'],course:['coSelected','courseId']};
+      var map = {student:['sSelected','studentId'],grade:['gSelected','gradeId'],dormitory:['dSelected','dormitoryId'],assignment:['aSelected','assignmentId'],class:['cSelected','classId'],course:['coSelected','courseId'],reward:['rwSelected','rewardId'],aid:['adSelected','aidId'],award:['awSelected','awardId'],club:['cbSelected','clubId'],leadership:['ldSelected','leadershipId']};
       var ids = this[map[type][0]].map(function(s){return s[map[type][1]];}).join(',');
       if (!ids) return;
       this.del(type, ids);
