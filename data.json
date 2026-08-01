@@ -41,6 +41,27 @@
       "className": "",
       "createTime": "2026-08-01 10:50:42",
       "updateTime": ""
+    },
+    {
+      "studentNo": "1235031034",
+      "studentName": "李梓慕",
+      "gender": "0",
+      "birthDate": "",
+      "classId": null,
+      "phone": "",
+      "email": "",
+      "idCard": "",
+      "nativePlace": "",
+      "nation": "",
+      "politicalStatus": "",
+      "enrollmentDate": "",
+      "graduationDate": "",
+      "status": "0",
+      "remark": "",
+      "studentId": 10,
+      "className": "",
+      "createTime": "2026-08-01 10:52:52",
+      "updateTime": ""
     }
   ],
   "grades": [],
@@ -313,13 +334,13 @@
     }
   ],
   "nextId": {
-    "student": 10,
+    "student": 11,
     "grade": 7,
     "dormitory": 7,
     "assignment": 3,
     "class": 4,
     "course": 7,
-    "user": 7
+    "user": 8
   },
   "users": [
     {
@@ -356,6 +377,15 @@
       "displayName": "崔宇博",
       "studentId": 9,
       "createTime": "2026-08-01 10:50:42"
+    },
+    {
+      "userId": 7,
+      "username": "1235031034",
+      "password": "$2b$10$mrEXGpDflWmtCEnZcF2LWOxIwbCLis/gSWvK5d/Te6.fDjxvUThHW",
+      "role": "student",
+      "displayName": "李梓慕",
+      "studentId": 10,
+      "createTime": "2026-08-01 10:52:52"
     }
   ],
   "sessions": {
