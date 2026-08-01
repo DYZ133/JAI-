@@ -34,6 +34,81 @@ function verifyToken(token) {
   }
 }
 
+const https = require('https');
+
+// ========== GitHub 自动同步（解决 Vercel 冷启动数据丢失问题）==========
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
+const GITHUB_REPO = 'DYZ133/JAI-';
+const GITHUB_FILE_PATH = 'student-system/data.json';
+let syncTimer = null;
+let pendingSync = false;
+
+function githubApi(method, urlPath, body) {
+  return new Promise((resolve, reject) => {
+    const bodyStr = body ? JSON.stringify(body) : null;
+    const options = {
+      hostname: 'api.github.com',
+      path: urlPath,
+      method: method,
+      headers: {
+        'Authorization': 'Bearer ' + GITHUB_TOKEN,
+        'User-Agent': 'student-system',
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    };
+    if (bodyStr) {
+      options.headers['Content-Type'] = 'application/json';
+      options.headers['Content-Length'] = Buffer.byteLength(bodyStr);
+    }
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          if (res.statusCode >= 200 && res.statusCode < 300) resolve(json);
+          else reject(new Error('GitHub API error: ' + (json.message || res.statusCode)));
+        } catch(e) { reject(e); }
+      });
+    });
+    req.on('error', reject);
+    if (bodyStr) req.write(bodyStr);
+    req.end();
+  });
+}
+
+// 异步同步数据到 GitHub（不阻塞请求响应，失败静默）
+function syncToGitHub(dbData) {
+  if (!IS_VERCEL || !GITHUB_TOKEN) return Promise.resolve();
+
+  return githubApi('GET', '/repos/' + GITHUB_REPO + '/contents/' + GITHUB_FILE_PATH)
+    .then(current => {
+      const content = Buffer.from(JSON.stringify(dbData, null, 2)).toString('base64');
+      return githubApi('PUT', '/repos/' + GITHUB_REPO + '/contents/' + GITHUB_FILE_PATH, {
+        message: 'auto-sync: 自动备份数据 [' + new Date().toISOString().replace('T', ' ').substring(0, 19) + ']',
+        content: content,
+        sha: current.sha
+      });
+    })
+    .then(() => {
+      console.log('[Sync] 数据已备份到 GitHub');
+    })
+    .catch(err => {
+      console.error('[Sync] 备份失败:', err.message);
+    });
+}
+
+// 防抖同步：500ms 内多次写入只触发一次同步
+function scheduleSync(db) {
+  pendingSync = true;
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => {
+    syncToGitHub(db);
+    syncTimer = null;
+    pendingSync = false;
+  }, 500);
+}
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -47,13 +122,43 @@ const SEED_FILE = path.join(__dirname, 'data.json');     // 初始种子数据�
 const DB_FILE = path.join(DATA_DIR, 'data.json');        // 运行时数据文件
 
 // ========== 数据存储 ==========
-function load() {
-  // Vercel: 冷启动时 /tmp/data.json 不存在，从打包的种子文件复制
-  if (!fs.existsSync(DB_FILE)) {
-    if (IS_VERCEL && fs.existsSync(SEED_FILE)) {
-      fs.copyFileSync(SEED_FILE, DB_FILE);
-      return JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
+
+// 冷启动时从 GitHub 同步拉取最新数据（替代陈旧的本地种子文件）
+function fetchLatestFromGitHub() {
+  if (!GITHUB_TOKEN) return null;
+  try {
+    const url = 'https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + GITHUB_FILE_PATH;
+    const result = require('child_process').execSync(
+      'curl -sf -H "Authorization: Bearer ' + GITHUB_TOKEN + '" -H "User-Agent: student-system" -H "Accept: application/vnd.github.v3+json" "' + url + '"',
+      { timeout: 8000, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }
+    );
+    const json = JSON.parse(result);
+    if (json.content) {
+      const data = Buffer.from(json.content, 'base64').toString('utf-8');
+      fs.writeFileSync(DB_FILE, data);  // 缓存到 /tmp 供后续请求使用
+      console.log('[Load] 冷启动：已从 GitHub 恢复最新数据');
+      return JSON.parse(data);
     }
+  } catch(e) {
+    console.error('[Load] 从 GitHub 恢复失败，回退到本地种子:', e.message);
+  }
+  return null;
+}
+
+function load() {
+  // Vercel: 冷启动时 /tmp/data.json 不存在
+  if (!fs.existsSync(DB_FILE)) {
+    if (IS_VERCEL) {
+      // 优先从 GitHub 拉取最新数据（解决冷启动数据丢失问题）
+      const latest = fetchLatestFromGitHub();
+      if (latest) return latest;
+      // GitHub 拉取失败，回退到部署包中的种子文件
+      if (fs.existsSync(SEED_FILE)) {
+        fs.copyFileSync(SEED_FILE, DB_FILE);
+        return JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
+      }
+    }
+    // 本地开发或首次启动：创建空数据库
     const init = {
       students: [],
       grades: [],
@@ -104,6 +209,7 @@ function load() {
 
 function save(db) {
   fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+  scheduleSync(db);  // 自动备份到 GitHub，防止 Vercel 冷启动数据丢失
 }
 
 function nextId(db, key) {
