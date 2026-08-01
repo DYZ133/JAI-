@@ -259,14 +259,35 @@ function now() {
 }
 
 function seed(db) {
-  const c1 = nextId(db, 'class');
-  const c2 = nextId(db, 'class');
-  const c3 = nextId(db, 'class');
-  db.classes.push(
-    { classId: c1, className: '软件工程2401班', grade: '2024级', major: '软件工程', department: '计算机学院', classTeacher: '张老师', studentCount: 0, status: '0', createBy: 'admin', createTime: now(), updateBy: '', updateTime: '', remark: '' },
-    { classId: c2, className: '软件工程2402班', grade: '2024级', major: '软件工程', department: '计算机学院', classTeacher: '李老师', studentCount: 0, status: '0', createBy: 'admin', createTime: now(), updateBy: '', updateTime: '', remark: '' },
-    { classId: c3, className: '计算机科学2401班', grade: '2024级', major: '计算机科学与技术', department: '计算机学院', classTeacher: '王老师', studentCount: 0, status: '0', createBy: 'admin', createTime: now(), updateBy: '', updateTime: '', remark: '' }
-  );
+  // 24个班级：23级~26级，每级6个班
+  const grades = ['2023级', '2024级', '2025级', '2026级'];
+  const classDefs = [
+    { suffix: '技术1班', major: '人工智能技术' },
+    { suffix: '技术2班', major: '人工智能技术' },
+    { suffix: '技术3班', major: '人工智能技术' },
+    { suffix: '技术4班', major: '人工智能技术' },
+    { suffix: '虚拟现实1班', major: '虚拟现实技术' },
+    { suffix: '软件1班', major: '软件技术' }
+  ];
+  grades.forEach(g => {
+    classDefs.forEach(cd => {
+      db.classes.push({
+        classId: nextId(db, 'class'),
+        className: g.substring(2, 4) + cd.suffix,
+        grade: g,
+        major: cd.major,
+        department: '人工智能学院',
+        classTeacher: '',
+        studentCount: 0,
+        status: '0',
+        createBy: 'admin',
+        createTime: now(),
+        updateBy: '',
+        updateTime: '',
+        remark: ''
+      });
+    });
+  });
 
   for (let i = 1; i <= 6; i++) {
     const id = nextId(db, 'dormitory');
