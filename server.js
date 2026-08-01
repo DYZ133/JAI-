@@ -187,7 +187,13 @@ function load() {
       classes: [],
       courses: [],
       users: [],
-      nextId: { student: 1, grade: 1, dormitory: 1, assignment: 1, class: 1, course: 1, user: 1 }
+      rewards: [],
+      aids: [],
+      awards: [],
+      clubs: [],
+      leaderships: [],
+      nextId: { student: 1, grade: 1, dormitory: 1, assignment: 1, class: 1, course: 1, user: 1,
+                reward: 1, aid: 1, award: 1, club: 1, leadership: 1 }
     };
     seed(init);
     fs.writeFileSync(DB_FILE, JSON.stringify(init, null, 2));
@@ -198,6 +204,17 @@ function load() {
   let migrated = false;
   if (!db.users) { db.users = []; migrated = true; }
   if (!db.nextId.user) { db.nextId.user = db.users.length + 1; migrated = true; }
+  // 综合素质模块迁移
+  if (!db.rewards) { db.rewards = []; migrated = true; }
+  if (!db.aids) { db.aids = []; migrated = true; }
+  if (!db.awards) { db.awards = []; migrated = true; }
+  if (!db.clubs) { db.clubs = []; migrated = true; }
+  if (!db.leaderships) { db.leaderships = []; migrated = true; }
+  if (!db.nextId.reward) { db.nextId.reward = 1; migrated = true; }
+  if (!db.nextId.aid) { db.nextId.aid = 1; migrated = true; }
+  if (!db.nextId.award) { db.nextId.award = 1; migrated = true; }
+  if (!db.nextId.club) { db.nextId.club = 1; migrated = true; }
+  if (!db.nextId.leadership) { db.nextId.leadership = 1; migrated = true; }
   if (db.users.length === 0) {
     db.users.push({
       userId: nextId(db, 'user'),
@@ -722,6 +739,256 @@ app.delete('/api/student/course/:ids', auth, requireTeacher, (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
+// ============ 奖惩记录 API ============
+app.get('/api/student/reward/list', auth, requireTeacher, (req, res) => {
+  const db = load();
+  let list = [...db.rewards];
+  const { studentNo, studentName, type } = req.query;
+  if (studentNo) list = list.filter(r => r.studentNo && r.studentNo.includes(studentNo));
+  if (studentName) list = list.filter(r => r.studentName && r.studentName.includes(studentName));
+  if (type) list = list.filter(r => r.type === type);
+  list.sort((a, b) => b.rewardId - a.rewardId);
+  res.json(paginate(list, parseInt(req.query.pageNum) || 1, parseInt(req.query.pageSize) || 10));
+});
+
+app.get('/api/student/reward/:id', auth, (req, res) => {
+  const db = load();
+  res.json({ data: db.rewards.find(x => x.rewardId == req.params.id) || null });
+});
+
+app.post('/api/student/reward', auth, requireTeacher, (req, res) => {
+  const db = load();
+  const id = nextId(db, 'reward');
+  const student = db.students.find(s => s.studentId == req.body.studentId);
+  db.rewards.push({ ...req.body, rewardId: id,
+    studentName: student ? student.studentName : '',
+    studentNo: student ? student.studentNo : '',
+    createTime: now(), updateTime: '' });
+  save(db);
+  res.json({ code: 200, msg: '操作成功' });
+});
+
+app.put('/api/student/reward', auth, requireTeacher, (req, res) => {
+  const db = load();
+  const idx = db.rewards.findIndex(x => x.rewardId == req.body.rewardId);
+  if (idx === -1) return res.json({ code: 500, msg: '记录不存在' });
+  const student = db.students.find(s => s.studentId == req.body.studentId);
+  db.rewards[idx] = { ...db.rewards[idx], ...req.body,
+    studentName: student ? student.studentName : db.rewards[idx].studentName,
+    studentNo: student ? student.studentNo : db.rewards[idx].studentNo,
+    updateTime: now() };
+  save(db);
+  res.json({ code: 200, msg: '操作成功' });
+});
+
+app.delete('/api/student/reward/:ids', auth, requireTeacher, (req, res) => {
+  const db = load();
+  const ids = req.params.ids.split(',').map(Number);
+  db.rewards = db.rewards.filter(r => !ids.includes(r.rewardId));
+  save(db);
+  res.json({ code: 200, msg: '操作成功' });
+});
+
+// ============ 资助记录 API ============
+app.get('/api/student/aid/list', auth, requireTeacher, (req, res) => {
+  const db = load();
+  let list = [...db.aids];
+  const { studentNo, studentName, type } = req.query;
+  if (studentNo) list = list.filter(r => r.studentNo && r.studentNo.includes(studentNo));
+  if (studentName) list = list.filter(r => r.studentName && r.studentName.includes(studentName));
+  if (type) list = list.filter(r => r.type === type);
+  list.sort((a, b) => b.aidId - a.aidId);
+  res.json(paginate(list, parseInt(req.query.pageNum) || 1, parseInt(req.query.pageSize) || 10));
+});
+
+app.get('/api/student/aid/:id', auth, (req, res) => {
+  const db = load();
+  res.json({ data: db.aids.find(x => x.aidId == req.params.id) || null });
+});
+
+app.post('/api/student/aid', auth, requireTeacher, (req, res) => {
+  const db = load();
+  const id = nextId(db, 'aid');
+  const student = db.students.find(s => s.studentId == req.body.studentId);
+  db.aids.push({ ...req.body, aidId: id,
+    studentName: student ? student.studentName : '',
+    studentNo: student ? student.studentNo : '',
+    createTime: now(), updateTime: '' });
+  save(db);
+  res.json({ code: 200, msg: '操作成功' });
+});
+
+app.put('/api/student/aid', auth, requireTeacher, (req, res) => {
+  const db = load();
+  const idx = db.aids.findIndex(x => x.aidId == req.body.aidId);
+  if (idx === -1) return res.json({ code: 500, msg: '记录不存在' });
+  const student = db.students.find(s => s.studentId == req.body.studentId);
+  db.aids[idx] = { ...db.aids[idx], ...req.body,
+    studentName: student ? student.studentName : db.aids[idx].studentName,
+    studentNo: student ? student.studentNo : db.aids[idx].studentNo,
+    updateTime: now() };
+  save(db);
+  res.json({ code: 200, msg: '操作成功' });
+});
+
+app.delete('/api/student/aid/:ids', auth, requireTeacher, (req, res) => {
+  const db = load();
+  const ids = req.params.ids.split(',').map(Number);
+  db.aids = db.aids.filter(r => !ids.includes(r.aidId));
+  save(db);
+  res.json({ code: 200, msg: '操作成功' });
+});
+
+// ============ 展赛获奖 API ============
+app.get('/api/student/award/list', auth, requireTeacher, (req, res) => {
+  const db = load();
+  let list = [...db.awards];
+  const { studentNo, studentName, level } = req.query;
+  if (studentNo) list = list.filter(r => r.studentNo && r.studentNo.includes(studentNo));
+  if (studentName) list = list.filter(r => r.studentName && r.studentName.includes(studentName));
+  if (level) list = list.filter(r => r.level === level);
+  list.sort((a, b) => b.awardId - a.awardId);
+  res.json(paginate(list, parseInt(req.query.pageNum) || 1, parseInt(req.query.pageSize) || 10));
+});
+
+app.get('/api/student/award/:id', auth, (req, res) => {
+  const db = load();
+  res.json({ data: db.awards.find(x => x.awardId == req.params.id) || null });
+});
+
+app.post('/api/student/award', auth, requireTeacher, (req, res) => {
+  const db = load();
+  const id = nextId(db, 'award');
+  const student = db.students.find(s => s.studentId == req.body.studentId);
+  db.awards.push({ ...req.body, awardId: id,
+    studentName: student ? student.studentName : '',
+    studentNo: student ? student.studentNo : '',
+    createTime: now(), updateTime: '' });
+  save(db);
+  res.json({ code: 200, msg: '操作成功' });
+});
+
+app.put('/api/student/award', auth, requireTeacher, (req, res) => {
+  const db = load();
+  const idx = db.awards.findIndex(x => x.awardId == req.body.awardId);
+  if (idx === -1) return res.json({ code: 500, msg: '记录不存在' });
+  const student = db.students.find(s => s.studentId == req.body.studentId);
+  db.awards[idx] = { ...db.awards[idx], ...req.body,
+    studentName: student ? student.studentName : db.awards[idx].studentName,
+    studentNo: student ? student.studentNo : db.awards[idx].studentNo,
+    updateTime: now() };
+  save(db);
+  res.json({ code: 200, msg: '操作成功' });
+});
+
+app.delete('/api/student/award/:ids', auth, requireTeacher, (req, res) => {
+  const db = load();
+  const ids = req.params.ids.split(',').map(Number);
+  db.awards = db.awards.filter(r => !ids.includes(r.awardId));
+  save(db);
+  res.json({ code: 200, msg: '操作成功' });
+});
+
+// ============ 社团经历 API ============
+app.get('/api/student/club/list', auth, requireTeacher, (req, res) => {
+  const db = load();
+  let list = [...db.clubs];
+  const { studentNo, studentName, clubName } = req.query;
+  if (studentNo) list = list.filter(r => r.studentNo && r.studentNo.includes(studentNo));
+  if (studentName) list = list.filter(r => r.studentName && r.studentName.includes(studentName));
+  if (clubName) list = list.filter(r => r.clubName && r.clubName.includes(clubName));
+  list.sort((a, b) => b.clubId - a.clubId);
+  res.json(paginate(list, parseInt(req.query.pageNum) || 1, parseInt(req.query.pageSize) || 10));
+});
+
+app.get('/api/student/club/:id', auth, (req, res) => {
+  const db = load();
+  res.json({ data: db.clubs.find(x => x.clubId == req.params.id) || null });
+});
+
+app.post('/api/student/club', auth, requireTeacher, (req, res) => {
+  const db = load();
+  const id = nextId(db, 'club');
+  const student = db.students.find(s => s.studentId == req.body.studentId);
+  db.clubs.push({ ...req.body, clubId: id,
+    studentName: student ? student.studentName : '',
+    studentNo: student ? student.studentNo : '',
+    createTime: now(), updateTime: '' });
+  save(db);
+  res.json({ code: 200, msg: '操作成功' });
+});
+
+app.put('/api/student/club', auth, requireTeacher, (req, res) => {
+  const db = load();
+  const idx = db.clubs.findIndex(x => x.clubId == req.body.clubId);
+  if (idx === -1) return res.json({ code: 500, msg: '记录不存在' });
+  const student = db.students.find(s => s.studentId == req.body.studentId);
+  db.clubs[idx] = { ...db.clubs[idx], ...req.body,
+    studentName: student ? student.studentName : db.clubs[idx].studentName,
+    studentNo: student ? student.studentNo : db.clubs[idx].studentNo,
+    updateTime: now() };
+  save(db);
+  res.json({ code: 200, msg: '操作成功' });
+});
+
+app.delete('/api/student/club/:ids', auth, requireTeacher, (req, res) => {
+  const db = load();
+  const ids = req.params.ids.split(',').map(Number);
+  db.clubs = db.clubs.filter(r => !ids.includes(r.clubId));
+  save(db);
+  res.json({ code: 200, msg: '操作成功' });
+});
+
+// ============ 学生干部 API ============
+app.get('/api/student/leadership/list', auth, requireTeacher, (req, res) => {
+  const db = load();
+  let list = [...db.leaderships];
+  const { studentNo, studentName, type } = req.query;
+  if (studentNo) list = list.filter(r => r.studentNo && r.studentNo.includes(studentNo));
+  if (studentName) list = list.filter(r => r.studentName && r.studentName.includes(studentName));
+  if (type) list = list.filter(r => r.type === type);
+  list.sort((a, b) => b.leadershipId - a.leadershipId);
+  res.json(paginate(list, parseInt(req.query.pageNum) || 1, parseInt(req.query.pageSize) || 10));
+});
+
+app.get('/api/student/leadership/:id', auth, (req, res) => {
+  const db = load();
+  res.json({ data: db.leaderships.find(x => x.leadershipId == req.params.id) || null });
+});
+
+app.post('/api/student/leadership', auth, requireTeacher, (req, res) => {
+  const db = load();
+  const id = nextId(db, 'leadership');
+  const student = db.students.find(s => s.studentId == req.body.studentId);
+  db.leaderships.push({ ...req.body, leadershipId: id,
+    studentName: student ? student.studentName : '',
+    studentNo: student ? student.studentNo : '',
+    createTime: now(), updateTime: '' });
+  save(db);
+  res.json({ code: 200, msg: '操作成功' });
+});
+
+app.put('/api/student/leadership', auth, requireTeacher, (req, res) => {
+  const db = load();
+  const idx = db.leaderships.findIndex(x => x.leadershipId == req.body.leadershipId);
+  if (idx === -1) return res.json({ code: 500, msg: '记录不存在' });
+  const student = db.students.find(s => s.studentId == req.body.studentId);
+  db.leaderships[idx] = { ...db.leaderships[idx], ...req.body,
+    studentName: student ? student.studentName : db.leaderships[idx].studentName,
+    studentNo: student ? student.studentNo : db.leaderships[idx].studentNo,
+    updateTime: now() };
+  save(db);
+  res.json({ code: 200, msg: '操作成功' });
+});
+
+app.delete('/api/student/leadership/:ids', auth, requireTeacher, (req, res) => {
+  const db = load();
+  const ids = req.params.ids.split(',').map(Number);
+  db.leaderships = db.leaderships.filter(r => !ids.includes(r.leadershipId));
+  save(db);
+  res.json({ code: 200, msg: '操作成功' });
+});
+
 // ============ 仪表盘统计 ============
 // 同步状态检查
 app.get('/api/dashboard/sync-status', auth, (req, res) => {
@@ -819,6 +1086,37 @@ app.get('/api/student/self/dormitory', auth, (req, res) => {
   const db = load();
   const assignment = db.assignments.find(a => a.studentId === req.user.studentId && a.isCurrent === '1');
   res.json({ code: 200, data: assignment || null });
+});
+
+// 学生自查：综合素质数据
+app.get('/api/student/self/rewards', auth, (req, res) => {
+  if (req.user.role !== 'student') return res.json({ code: 403, msg: '仅学生可访问' });
+  const db = load();
+  res.json({ code: 200, data: db.rewards.filter(r => r.studentId == req.user.studentId).sort((a, b) => b.rewardId - a.rewardId) });
+});
+
+app.get('/api/student/self/aids', auth, (req, res) => {
+  if (req.user.role !== 'student') return res.json({ code: 403, msg: '仅学生可访问' });
+  const db = load();
+  res.json({ code: 200, data: db.aids.filter(r => r.studentId == req.user.studentId).sort((a, b) => b.aidId - a.aidId) });
+});
+
+app.get('/api/student/self/awards', auth, (req, res) => {
+  if (req.user.role !== 'student') return res.json({ code: 403, msg: '仅学生可访问' });
+  const db = load();
+  res.json({ code: 200, data: db.awards.filter(r => r.studentId == req.user.studentId).sort((a, b) => b.awardId - a.awardId) });
+});
+
+app.get('/api/student/self/clubs', auth, (req, res) => {
+  if (req.user.role !== 'student') return res.json({ code: 403, msg: '仅学生可访问' });
+  const db = load();
+  res.json({ code: 200, data: db.clubs.filter(r => r.studentId == req.user.studentId).sort((a, b) => b.clubId - a.clubId) });
+});
+
+app.get('/api/student/self/leaderships', auth, (req, res) => {
+  if (req.user.role !== 'student') return res.json({ code: 403, msg: '仅学生可访问' });
+  const db = load();
+  res.json({ code: 200, data: db.leaderships.filter(r => r.studentId == req.user.studentId).sort((a, b) => b.leadershipId - a.leadershipId) });
 });
 
 // ============ 数据导出/导入 API ============
