@@ -39,9 +39,7 @@ const https = require('https');
 // ========== GitHub 自动同步（解决 Vercel 冷启动数据丢失问题）==========
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
 const GITHUB_REPO = 'DYZ133/JAI-';
-const GITHUB_FILE_PATH = 'student-system/data.json';
-let syncTimer = null;
-let pendingSync = false;
+const GITHUB_FILE_PATH = 'data.json';  // GitHub 仓库根目录（注意：不是 student-system 子目录）
 
 function githubApi(method, urlPath, body) {
   return new Promise((resolve, reject) => {
@@ -77,36 +75,38 @@ function githubApi(method, urlPath, body) {
   });
 }
 
-// 异步同步数据到 GitHub（不阻塞请求响应，失败静默）
-function syncToGitHub(dbData) {
-  if (!IS_VERCEL || !GITHUB_TOKEN) return Promise.resolve();
+// 同步备份到 GitHub（在响应前执行，确保数据持久化）
+// 使用子进程 curl 而非 setTimeout，因为 Vercel serverless 会在响应后冻结进程
+function syncToGitHubSync(dbData) {
+  if (!IS_VERCEL || !GITHUB_TOKEN) return;
+  const DB_JSON = JSON.stringify(dbData, null, 2);
+  try {
+    // 第一步：获取当前文件 SHA
+    const getResult = require('child_process').execSync(
+      'curl -sf -H "Authorization: Bearer ' + GITHUB_TOKEN + '" -H "User-Agent: student-system" -H "Accept: application/vnd.github.v3+json" "https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + GITHUB_FILE_PATH + '"',
+      { timeout: 5000, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }
+    );
+    const current = JSON.parse(getResult);
+    if (!current.sha) { console.error('[Sync] 无法获取 SHA'); return; }
 
-  return githubApi('GET', '/repos/' + GITHUB_REPO + '/contents/' + GITHUB_FILE_PATH)
-    .then(current => {
-      const content = Buffer.from(JSON.stringify(dbData, null, 2)).toString('base64');
-      return githubApi('PUT', '/repos/' + GITHUB_REPO + '/contents/' + GITHUB_FILE_PATH, {
-        message: 'auto-sync: 自动备份数据 [' + new Date().toISOString().replace('T', ' ').substring(0, 19) + ']',
-        content: content,
-        sha: current.sha
-      });
-    })
-    .then(() => {
-      console.log('[Sync] 数据已备份到 GitHub');
-    })
-    .catch(err => {
-      console.error('[Sync] 备份失败:', err.message);
+    // 第二步：更新文件
+    const content = Buffer.from(DB_JSON).toString('base64');
+    const putBody = JSON.stringify({
+      message: 'auto-sync [' + new Date().toISOString().replace('T', ' ').substring(0, 19) + ']',
+      content: content,
+      sha: current.sha
     });
-}
-
-// 防抖同步：500ms 内多次写入只触发一次同步
-function scheduleSync(db) {
-  pendingSync = true;
-  if (syncTimer) clearTimeout(syncTimer);
-  syncTimer = setTimeout(() => {
-    syncToGitHub(db);
-    syncTimer = null;
-    pendingSync = false;
-  }, 500);
+    const tmpFile = '/tmp/sync_payload_' + Date.now() + '.json';
+    fs.writeFileSync(tmpFile, putBody);
+    require('child_process').execSync(
+      'curl -sf -X PUT -H "Authorization: Bearer ' + GITHUB_TOKEN + '" -H "User-Agent: student-system" -H "Content-Type: application/json" -d @' + tmpFile + ' "https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + GITHUB_FILE_PATH + '"',
+      { timeout: 5000, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }
+    );
+    try { fs.unlinkSync(tmpFile); } catch(e) {}
+    lastGithubCheck = Date.now();
+  } catch(e) {
+    console.error('[Sync] 备份失败:', e.message);
+  }
 }
 
 const app = express();
@@ -230,7 +230,7 @@ function load() {
 function save(db) {
   fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
   lastGithubCheck = Date.now();  // 写入后本实例数据最新，不需要立即检查 GitHub
-  scheduleSync(db);  // 自动备份到 GitHub，防止 Vercel 冷启动数据丢失
+  syncToGitHubSync(db);  // 同步备份到 GitHub（必须在响应前执行，Vercel 响应后会冻结进程）
 }
 
 function nextId(db, key) {
