@@ -341,7 +341,7 @@
     "class": 4,
     "course": 7,
     "user": 8,
-    "reward": 1,
+    "reward": 2,
     "aid": 1,
     "award": 1,
     "club": 1,
@@ -435,7 +435,22 @@
       "expiresAt": 1785893152631
     }
   },
-  "rewards": [],
+  "rewards": [
+    {
+      "studentId": 4,
+      "type": "����",
+      "name": "����ѧ��",
+      "level": "У��",
+      "date": "2025-06-15",
+      "org": "�˹�����ѧԺ",
+      "description": "Ʒѧ����",
+      "rewardId": 1,
+      "studentName": "董一喆",
+      "studentNo": "1235031007",
+      "createTime": "2026-08-01 11:05:13",
+      "updateTime": ""
+    }
+  ],
   "aids": [],
   "awards": [],
   "clubs": [],
