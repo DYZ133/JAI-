@@ -121,9 +121,12 @@ const DATA_DIR = IS_VERCEL ? '/tmp' : __dirname;
 const SEED_FILE = path.join(__dirname, 'data.json');     // 初始种子数据（随部署打包）
 const DB_FILE = path.join(DATA_DIR, 'data.json');        // 运行时数据文件
 
-// ========== 数据存储 ==========
+// ========== 数据存储（GitHub 作为多实例共享数据源）==========
+let cacheVersion = 0;       // 当前缓存版本号
+let lastGithubCheck = 0;    // 上次检查 GitHub 的时间戳
+const GITHUB_CHECK_INTERVAL = 5000;  // 5 秒内不重复检查 GitHub
 
-// 冷启动时从 GitHub 同步拉取最新数据（替代陈旧的本地种子文件）
+// 从 GitHub 同步拉取最新数据（解决 Vercel 多实例数据不同步问题）
 function fetchLatestFromGitHub() {
   if (!GITHUB_TOKEN) return null;
   try {
@@ -133,23 +136,40 @@ function fetchLatestFromGitHub() {
       { timeout: 8000, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }
     );
     const json = JSON.parse(result);
-    if (json.content) {
-      const data = Buffer.from(json.content, 'base64').toString('utf-8');
-      fs.writeFileSync(DB_FILE, data);  // 缓存到 /tmp 供后续请求使用
-      console.log('[Load] 冷启动：已从 GitHub 恢复最新数据');
-      return JSON.parse(data);
+    if (json.content && json.sha) {
+      // 检查 SHA 是否变化（避免重复解析大文件）
+      if (cacheVersion === 0 || String(json.sha) !== String(cacheVersion)) {
+        const data = Buffer.from(json.content, 'base64').toString('utf-8');
+        fs.writeFileSync(DB_FILE, data);
+        cacheVersion = json.sha;
+        console.log('[Load] 从 GitHub 更新数据，SHA:', String(json.sha).substring(0, 8));
+        return JSON.parse(data);
+      }
+      // SHA 未变，标记已检查
+      cacheVersion = json.sha;
     }
   } catch(e) {
-    console.error('[Load] 从 GitHub 恢复失败，回退到本地种子:', e.message);
+    console.error('[Load] GitHub 同步失败:', e.message);
   }
   return null;
 }
 
 function load() {
-  // Vercel: 冷启动时 /tmp/data.json 不存在
+  // Vercel 环境且有 GitHub Token：检查是否需要从 GitHub 同步
+  if (IS_VERCEL && GITHUB_TOKEN) {
+    const now = Date.now();
+    // 每 5 秒最多检查一次 GitHub，避免重复请求
+    if (now - lastGithubCheck > GITHUB_CHECK_INTERVAL || !fs.existsSync(DB_FILE)) {
+      lastGithubCheck = now;
+      const latest = fetchLatestFromGitHub();
+      if (latest) return latest;
+    }
+  }
+
+  // /tmp/data.json 不存在：冷启动
   if (!fs.existsSync(DB_FILE)) {
     if (IS_VERCEL) {
-      // 优先从 GitHub 拉取最新数据（解决冷启动数据丢失问题）
+      // 尝试从 GitHub 拉取
       const latest = fetchLatestFromGitHub();
       if (latest) return latest;
       // GitHub 拉取失败，回退到部署包中的种子文件
@@ -209,6 +229,7 @@ function load() {
 
 function save(db) {
   fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+  lastGithubCheck = Date.now();  // 写入后本实例数据最新，不需要立即检查 GitHub
   scheduleSync(db);  // 自动备份到 GitHub，防止 Vercel 冷启动数据丢失
 }
 
