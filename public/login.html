@@ -117,7 +117,7 @@ if (token) {
   // 验证 token 是否有效
   api.get('/auth/me', { headers: { Authorization: 'Bearer ' + token } }).then(function(r) {
     if (r.data.code === 200) {
-      if (role === 'teacher') window.location.href = '/index.html';
+      if (role === 'teacher' || role === 'sub_admin') window.location.href = '/index.html';
       else window.location.href = '/student.html';
     } else {
       localStorage.clear();
@@ -156,7 +156,9 @@ new Vue({
           localStorage.setItem('displayName', data.user.displayName);
           localStorage.setItem('username', data.user.username);
           if (data.user.studentId) localStorage.setItem('studentId', data.user.studentId);
-          if (data.user.role === 'teacher') {
+          if (data.user.managedClassId) localStorage.setItem('managedClassId', data.user.managedClassId);
+          if (data.user.managedClassName) localStorage.setItem('managedClassName', data.user.managedClassName);
+          if (data.user.role === 'teacher' || data.user.role === 'sub_admin') {
             window.location.href = '/index.html';
           } else {
             window.location.href = '/student.html';

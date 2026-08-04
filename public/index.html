@@ -37,7 +37,7 @@ body { font-family: 'Microsoft YaHei', sans-serif; background: #f0f2f5; color: #
 <div id="app">
   <div class="app-header">
     <span style="font-size:28px">🎓</span>
-    <h1>学生信息管理系统 - 教师端</h1>
+    <h1>学生信息管理系统 - <span v-if="userRole==='teacher'">教师端</span><span v-else>管理端</span></h1>
     <div style="flex:1"></div>
     <span style="font-size:13px;opacity:.85;margin-right:16px">👨‍🏫 {{ userName }}</span>
     <el-button size="mini" type="danger" plain @click="logout" style="margin-right:12px">退出</el-button>
@@ -51,20 +51,26 @@ body { font-family: 'Microsoft YaHei', sans-serif; background: #f0f2f5; color: #
       <div class="menu-item" :class="{active: page==='student'}" @click="page='student'">👨‍🎓 学生信息</div>
       <div class="menu-item" :class="{active: page==='grade'}" @click="page='grade'">📝 成绩管理</div>
       <div class="menu-item" :class="{active: page==='dormitory'}" @click="page='dormitory'">🏠 宿舍管理</div>
-      <div class="menu-item" :class="{active: page==='class'}" @click="page='class'">🏫 班级管理</div>
-      <div class="menu-item" :class="{active: page==='course'}" @click="page='course'">📚 课程管理</div>
+      <div class="menu-item" :class="{active: page==='class'}" @click="page='class'" v-if="userRole==='teacher'">🏫 班级管理</div>
+      <div class="menu-item" :class="{active: page==='course'}" @click="page='course'" v-if="userRole==='teacher'">📚 课程管理</div>
       <div class="menu-group-title">综合素质</div>
       <div class="menu-item" :class="{active: page==='reward'}" @click="page='reward'">🏆 奖惩记录</div>
       <div class="menu-item" :class="{active: page==='aid'}" @click="page='aid'">💰 资助记录</div>
       <div class="menu-item" :class="{active: page==='award'}" @click="page='award'">🥇 展赛获奖</div>
       <div class="menu-item" :class="{active: page==='club'}" @click="page='club'">🎯 社团经历</div>
       <div class="menu-item" :class="{active: page==='leadership'}" @click="page='leadership'">👔 学生干部</div>
+      <div class="menu-group-title" v-if="userRole==='teacher'">系统管理</div>
+      <div class="menu-item" :class="{active: page==='account'}" @click="page='account'" v-if="userRole==='teacher'">👥 账号管理</div>
     </div>
     <div class="main-content">
 
       <!-- 仪表盘 -->
       <div v-if="page==='dashboard'">
-        <!-- 数据持久化状态警告 -->
+        <!-- 分管理：显示管理的班级 -->
+        <div v-if="userRole==='sub_admin'" style="background:#e6f7ff;border:1px solid #91d5ff;border-radius:8px;padding:12px 20px;margin-bottom:16px">
+          📌 当前管理班级：<b>{{managedClassName}}</b>（仅可查看和管理该班级的数据）
+        </div>
+        <!-- 数据持久化状态警告 -->>
         <div v-if="!syncOk" style="background:#fff1f0;border:1px solid #ffa39e;border-radius:8px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
           <span style="font-size:28px">⚠️</span>
           <div style="flex:1">
@@ -80,7 +86,7 @@ body { font-family: 'Microsoft YaHei', sans-serif; background: #f0f2f5; color: #
           <div class="stat-card"><div class="icon cyan">🛏️</div><div class="info"><div class="num">{{stats.availableBeds}}</div><div class="label">空余床位</div></div></div>
           <div class="stat-card"><div class="icon red">📈</div><div class="info"><div class="num">{{stats.passRate}}%</div><div class="label">成绩通过率</div></div></div>
         </div>
-        <div class="card-box">
+        <div class="card-box" v-if="userRole==='teacher'">
           <h3 style="margin-bottom:12px">💾 数据管理</h3>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
             <el-button size="small" type="primary" icon="el-icon-download" @click="exportData">导出数据备份</el-button>
@@ -94,7 +100,7 @@ body { font-family: 'Microsoft YaHei', sans-serif; background: #f0f2f5; color: #
             <span style="font-size:12px;color:#999;line-height:32px;margin-left:8px">下载模板→填写数据→导入Excel。追加不覆盖，已存在学号自动跳过。</span>
           </div>
         </div>
-        <div class="card-box">
+        <div class="card-box" v-if="userRole==='teacher'">
           <h3 style="margin-bottom:12px">🔗 分享查询系统</h3>
           <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
             <div>
@@ -132,7 +138,7 @@ body { font-family: 'Microsoft YaHei', sans-serif; background: #f0f2f5; color: #
             <el-input v-model="sQuery.studentNo" placeholder="学号" size="small" style="width:130px" clearable @keyup.enter="loadStudents"></el-input>
             <el-input v-model="sQuery.studentName" placeholder="姓名" size="small" style="width:130px" clearable @keyup.enter="loadStudents"></el-input>
             <el-select v-model="sQuery.gender" placeholder="性别" size="small" style="width:80px" clearable @change="loadStudents"><el-option label="男" value="0"></el-option><el-option label="女" value="1"></el-option></el-select>
-            <el-select v-model="sQuery.classId" placeholder="班级" size="small" style="width:150px" clearable @change="loadStudents"><el-option v-for="c in classList" :key="c.classId" :label="c.className" :value="c.classId"></el-option></el-select>
+            <el-select v-model="sQuery.classId" placeholder="班级" size="small" style="width:150px" clearable @change="loadStudents" :disabled="userRole==='sub_admin'"><el-option v-for="c in classList" :key="c.classId" :label="c.className" :value="c.classId"></el-option></el-select>
             <el-select v-model="sQuery.status" placeholder="状态" size="small" style="width:90px" clearable @change="loadStudents"><el-option label="在读" value="0"></el-option><el-option label="休学" value="1"></el-option><el-option label="退学" value="2"></el-option><el-option label="毕业" value="3"></el-option></el-select>
             <el-button type="primary" size="small" icon="el-icon-search" @click="loadStudents">搜索</el-button>
             <el-button size="small" icon="el-icon-plus" @click="openStudentDialog()">新增</el-button>
@@ -428,6 +434,28 @@ body { font-family: 'Microsoft YaHei', sans-serif; background: #f0f2f5; color: #
         </div>
       </div>
 
+      <!-- 账号管理（仅超管） -->
+      <div v-if="page==='account'">
+        <div class="card-box">
+          <div class="toolbar">
+            <span style="font-weight:bold;font-size:15px">👥 分管理账号列表</span>
+            <el-button size="small" type="primary" icon="el-icon-plus" @click="openSubAdminDialog()" style="float:right">新增分管理</el-button>
+          </div>
+          <el-table :data="subAdminList" size="small">
+            <el-table-column prop="username" label="用户名" width="130"></el-table-column>
+            <el-table-column prop="displayName" label="显示名" width="150"></el-table-column>
+            <el-table-column prop="managedClassName" label="管理班级" width="140"></el-table-column>
+            <el-table-column prop="createTime" label="创建时间" width="160"></el-table-column>
+            <el-table-column label="操作">
+              <template slot-scope="s">
+                <el-button type="text" size="mini" @click="openSubAdminDialog(s.row)">编辑</el-button>
+                <el-button type="text" size="mini" style="color:#f56c6c" @click="deleteSubAdmin(s.row)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -439,7 +467,7 @@ body { font-family: 'Microsoft YaHei', sans-serif; background: #f0f2f5; color: #
       <el-col :span="12"><el-form-item label="姓名"><el-input v-model="sForm.studentName" placeholder="必填"></el-input></el-form-item></el-col>
       <el-col :span="12"><el-form-item label="性别"><el-select v-model="sForm.gender" style="width:100%"><el-option label="男" value="0"></el-option><el-option label="女" value="1"></el-option></el-select></el-form-item></el-col>
       <el-col :span="12"><el-form-item label="出生日期"><el-input v-model="sForm.birthDate" type="date"></el-input></el-form-item></el-col>
-      <el-col :span="12"><el-form-item label="班级"><el-select v-model="sForm.classId" style="width:100%"><el-option v-for="c in classList" :key="c.classId" :label="c.className" :value="c.classId"></el-option></el-select></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="班级"><el-select v-model="sForm.classId" style="width:100%" :disabled="userRole==='sub_admin'"><el-option v-for="c in classList" :key="c.classId" :label="c.className" :value="c.classId"></el-option></el-select></el-form-item></el-col>
       <el-col :span="12"><el-form-item label="手机号"><el-input v-model="sForm.phone"></el-input></el-form-item></el-col>
       <el-col :span="12"><el-form-item label="邮箱"><el-input v-model="sForm.email"></el-input></el-form-item></el-col>
       <el-col :span="12"><el-form-item label="身份证号"><el-input v-model="sForm.idCard"></el-input></el-form-item></el-col>
@@ -590,6 +618,24 @@ body { font-family: 'Microsoft YaHei', sans-serif; background: #f0f2f5; color: #
     <div slot="footer"><el-button @click="gradeViewDialog=false">关闭</el-button></div>
   </el-dialog>
 
+  <!-- 分管理账号弹窗 -->
+  <el-dialog :title="subAdminForm.userId?'修改分管理':'新增分管理'" :visible.sync="subAdminDialog" width="500px">
+    <el-form :model="subAdminForm" label-width="100px" size="small">
+      <el-form-item label="用户名"><el-input v-model="subAdminForm.username" placeholder="登录用户名"></el-input></el-form-item>
+      <el-form-item label="密码"><el-input v-model="subAdminForm.password" placeholder="留空则不修改" type="password"></el-input></el-form-item>
+      <el-form-item label="显示名"><el-input v-model="subAdminForm.displayName" placeholder="如：23虚拟现实1班管理员"></el-input></el-form-item>
+      <el-form-item label="管理班级">
+        <el-select v-model="subAdminForm.managedClassId" placeholder="选择班级" style="width:100%" filterable>
+          <el-option v-for="c in classList" :key="c.classId" :label="c.className+' ('+c.major+')'" :value="c.classId"></el-option>
+        </el-select>
+      </el-form-item>
+    </el-form>
+    <div slot="footer">
+      <el-button @click="subAdminDialog=false">取消</el-button>
+      <el-button type="primary" @click="saveSubAdmin">确定</el-button>
+    </div>
+  </el-dialog>
+
   <!-- Excel导入结果弹窗 -->
   <el-dialog title="导入结果" :visible.sync="importResultDialog" width="600px">
     <div style="text-align:center;margin-bottom:20px">
@@ -648,8 +694,9 @@ function paginate(list, pageNum, pageSize) {
   return { rows: list.slice((pageNum-1)*pageSize, pageNum*pageSize), total: list.length };
 }
 
-// 认证检查
-if (!localStorage.getItem("token") || localStorage.getItem("role") !== "teacher") {
+// 认证检查：超管(teacher)和分管理(sub_admin)可以访问
+var _role = localStorage.getItem("role");
+if (!localStorage.getItem("token") || (_role !== "teacher" && _role !== "sub_admin")) {
   localStorage.clear();
   window.location.href = "/login.html";
 }
@@ -657,6 +704,10 @@ if (!localStorage.getItem("token") || localStorage.getItem("role") !== "teacher"
 new Vue({
   el: '#app',
   data: {
+    // 角色信息
+    userRole: _role || 'teacher',
+    managedClassId: localStorage.getItem('managedClassId') || '',
+    managedClassName: localStorage.getItem('managedClassName') || '',
     page: 'dashboard',
     today: new Date().toISOString().substring(0, 10),
     stats: { studentCount:0, classCount:0, dormitoryCount:0, courseCount:0, availableBeds:0, passRate:0 },
@@ -711,7 +762,10 @@ new Vue({
     ldDialog:false, ldForm:{},
     // Excel导入
     importType:'json', importResultDialog:false,
-    importResult:{total:0,success:0,skipped:0,warnings:[]}
+    importResult:{total:0,success:0,skipped:0,warnings:[]},
+    // 分管理账号管理
+    subAdminList:[], subAdminDialog:false,
+    subAdminForm:{userId:null,username:'',password:'',displayName:'',managedClassId:''}
   },
   computed: {
     recentStudents: function() { return this.sList.slice(0, 5); }
@@ -739,6 +793,7 @@ new Vue({
       else if (val === 'club') this.loadClubs();
       else if (val === 'leadership') this.loadLeaderships();
       else if (val === 'dashboard') this.loadDashboard();
+      else if (val === 'account') this.loadSubAdmins();
     }
   },
   methods: {
@@ -761,7 +816,9 @@ new Vue({
       if (row) {
         api.get('/student/info/'+row.studentId).then(function(r){self.sForm=Object.assign({},r.data.data);self.sDialog=true;});
       } else {
-        this.sForm = {studentNo:'',studentName:'',gender:'0',birthDate:'',classId:null,phone:'',email:'',idCard:'',nativePlace:'',nation:'',politicalStatus:'',enrollmentDate:'',graduationDate:'',status:'0',remark:''};
+        // 分管理：自动锁定班级
+        var classId = this.userRole==='sub_admin' ? parseInt(this.managedClassId) : null;
+        this.sForm = {studentNo:'',studentName:'',gender:'0',birthDate:'',classId:classId,phone:'',email:'',idCard:'',nativePlace:'',nation:'',politicalStatus:'',enrollmentDate:'',graduationDate:'',status:'0',remark:''};
         this.sDialog = true;
       }
     },
@@ -980,6 +1037,50 @@ new Vue({
       var ids = this[map[type][0]].map(function(s){return s[map[type][1]];}).join(',');
       if (!ids) return;
       this.del(type, ids);
+    },
+
+    // ==== 分管理账号管理 ====
+    loadSubAdmins: function() {
+      var self = this;
+      api.get('/auth/sub-admins').then(function(r) {
+        self.subAdminList = r.data.data || [];
+      });
+    },
+    openSubAdminDialog: function(row) {
+      if (row) {
+        this.subAdminForm = {userId:row.userId,username:row.username,password:'',displayName:row.displayName,managedClassId:row.managedClassId};
+      } else {
+        this.subAdminForm = {userId:null,username:'',password:'',displayName:'',managedClassId:''};
+      }
+      this.subAdminDialog = true;
+    },
+    saveSubAdmin: function() {
+      var self = this;
+      var f = this.subAdminForm;
+      if (!f.username || (!f.password && !f.userId) || !f.displayName || !f.managedClassId) {
+        this.$message.warning('请填写完整信息');
+        return;
+      }
+      if (f.userId) {
+        api.put('/auth/sub-admin', {userId:f.userId,password:f.password,displayName:f.displayName,managedClassId:f.managedClassId}).then(function(r) {
+          if (r.data.code === 200) { self.$message.success('修改成功'); self.subAdminDialog = false; self.loadSubAdmins(); }
+          else self.$message.error(r.data.msg);
+        });
+      } else {
+        api.post('/auth/sub-admin', {username:f.username,password:f.password,displayName:f.displayName,managedClassId:f.managedClassId}).then(function(r) {
+          if (r.data.code === 200) { self.$message.success('创建成功'); self.subAdminDialog = false; self.loadSubAdmins(); }
+          else self.$message.error(r.data.msg);
+        });
+      }
+    },
+    deleteSubAdmin: function(row) {
+      var self = this;
+      this.$confirm('确认删除分管理账号 "' + row.displayName + '"？', '提示', {type:'warning'}).then(function() {
+        api.delete('/auth/sub-admin/' + row.userId).then(function(r) {
+          if (r.data.code === 200) { self.$message.success('已删除'); self.loadSubAdmins(); }
+          else self.$message.error(r.data.msg);
+        });
+      }).catch(function() {});
     },
 
     // ==== 数据导入导出 ====

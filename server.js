@@ -410,8 +410,25 @@ function auth(req, res, next) {
 
 function requireTeacher(req, res, next) {
   if (!req.user) return res.status(401).json({ code: 401, msg: '未登录' });
-  if (req.user.role !== 'teacher') return res.status(403).json({ code: 403, msg: '无权限，仅教师可操作' });
+  if (req.user.role !== 'teacher') return res.status(403).json({ code: 403, msg: '无权限，仅超管可操作' });
   next();
+}
+
+// requireAdmin：超管和分管理都能访问（学生不能访问）
+function requireAdmin(req, res, next) {
+  if (!req.user) return res.status(401).json({ code: 401, msg: '未登录' });
+  if (req.user.role !== 'teacher' && req.user.role !== 'sub_admin') {
+    return res.status(403).json({ code: 403, msg: '无权限' });
+  }
+  next();
+}
+
+// 辅助：判断是否为分管理，获取其管理的班级ID
+function getManagedClassId(req) {
+  if (req.user && req.user.role === 'sub_admin') {
+    return req.user.managedClassId;
+  }
+  return null;
 }
 
 // ========== 分页辅助 ==========
@@ -422,9 +439,12 @@ function paginate(list, pageNum = 1, pageSize = 10) {
 }
 
 // ============ 学生 API ============
-app.get('/api/student/info/list', auth, requireTeacher, (req, res) => {
+app.get('/api/student/info/list', auth, requireAdmin, (req, res) => {
   const db = load();
   let list = [...db.students];
+  const managedClassId = getManagedClassId(req);
+  // 分数管理：强制只看自己班级的学生
+  if (managedClassId) list = list.filter(s => s.classId == managedClassId);
   const { studentNo, studentName, gender, classId, status } = req.query;
   if (studentNo) list = list.filter(s => s.studentNo.includes(studentNo));
   if (studentName) list = list.filter(s => s.studentName.includes(studentName));
@@ -437,9 +457,12 @@ app.get('/api/student/info/list', auth, requireTeacher, (req, res) => {
   res.json(paginate(list, parseInt(req.query.pageNum) || 1, parseInt(req.query.pageSize) || 10));
 });
 
-app.get('/api/student/info/all', auth, requireTeacher, (req, res) => {
+app.get('/api/student/info/all', auth, requireAdmin, (req, res) => {
   const db = load();
-  res.json({ data: db.students.filter(s => s.status === '0') });
+  const managedClassId = getManagedClassId(req);
+  let students = db.students.filter(s => s.status === '0');
+  if (managedClassId) students = students.filter(s => s.classId == managedClassId);
+  res.json({ data: students });
 });
 
 app.get('/api/student/info/:id', auth, (req, res) => {
@@ -449,8 +472,15 @@ app.get('/api/student/info/:id', auth, (req, res) => {
   res.json({ data: s || null });
 });
 
-app.post('/api/student/info', auth, requireTeacher, (req, res) => {
+app.post('/api/student/info', auth, requireAdmin, (req, res) => {
   const db = load();
+  const managedClassId = getManagedClassId(req);
+  // 分管理：强制使用自己管理的班级
+  if (managedClassId) {
+    req.body.classId = managedClassId;
+    const managedClass = db.classes.find(x => x.classId == managedClassId);
+    if (managedClass) req.body.className = managedClass.className;
+  }
   const exist = db.students.find(s => s.studentNo === req.body.studentNo);
   if (exist) return res.json({ code: 500, msg: '学号已存在' });
   const id = nextId(db, 'student');
@@ -463,8 +493,17 @@ app.post('/api/student/info', auth, requireTeacher, (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.put('/api/student/info', auth, requireTeacher, (req, res) => {
+app.put('/api/student/info', auth, requireAdmin, (req, res) => {
   const db = load();
+  const managedClassId = getManagedClassId(req);
+  // 分管理：不能修改班级，保持原班级不变
+  if (managedClassId) {
+    const original = db.students.find(x => x.studentId == req.body.studentId);
+    if (original) {
+      req.body.classId = original.classId;
+      req.body.className = original.className;
+    }
+  }
   const idx = db.students.findIndex(x => x.studentId == req.body.studentId);
   if (idx === -1) return res.json({ code: 500, msg: '学生不存在' });
   const exist = db.students.find(s => s.studentNo === req.body.studentNo && s.studentId != req.body.studentId);
@@ -475,7 +514,7 @@ app.put('/api/student/info', auth, requireTeacher, (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.delete('/api/student/info/:ids', auth, requireTeacher, (req, res) => {
+app.delete('/api/student/info/:ids', auth, requireAdmin, (req, res) => {
   const db = load();
   const ids = req.params.ids.split(',').map(Number);
   db.students = db.students.filter(s => !ids.includes(s.studentId));
@@ -486,9 +525,15 @@ app.delete('/api/student/info/:ids', auth, requireTeacher, (req, res) => {
 });
 
 // ============ 成绩 API ============
-app.get('/api/student/grade/list', auth, requireTeacher, (req, res) => {
+app.get('/api/student/grade/list', auth, requireAdmin, (req, res) => {
   const db = load();
   let list = [...db.grades];
+  // 分管理：只看自己班级学生的成绩
+  const managedClassId = getManagedClassId(req);
+  if (managedClassId) {
+    const classStudentIds = db.students.filter(s => s.classId == managedClassId).map(s => s.studentId);
+    list = list.filter(g => classStudentIds.includes(g.studentId));
+  }
   const { studentNo, studentName, studentId, courseId, semester, examType, isPassed } = req.query;
   if (studentNo) list = list.filter(g => g.studentNo && g.studentNo.includes(studentNo));
   if (studentName) list = list.filter(g => g.studentName && g.studentName.includes(studentName));
@@ -519,7 +564,7 @@ function calcGrade(score) {
   return { gradeLevel: '不及格', gradePoint: 0.0 };
 }
 
-app.post('/api/student/grade', auth, requireTeacher, (req, res) => {
+app.post('/api/student/grade', auth, requireAdmin, (req, res) => {
   const db = load();
   const id = nextId(db, 'grade');
   const student = db.students.find(s => s.studentId == req.body.studentId);
@@ -539,7 +584,7 @@ app.post('/api/student/grade', auth, requireTeacher, (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.put('/api/student/grade', auth, requireTeacher, (req, res) => {
+app.put('/api/student/grade', auth, requireAdmin, (req, res) => {
   const db = load();
   const idx = db.grades.findIndex(x => x.gradeId == req.body.gradeId);
   if (idx === -1) return res.json({ code: 500, msg: '成绩不存在' });
@@ -549,7 +594,7 @@ app.put('/api/student/grade', auth, requireTeacher, (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.delete('/api/student/grade/:ids', auth, requireTeacher, (req, res) => {
+app.delete('/api/student/grade/:ids', auth, requireAdmin, (req, res) => {
   const db = load();
   const ids = req.params.ids.split(',').map(Number);
   db.grades = db.grades.filter(g => !ids.includes(g.gradeId));
@@ -558,7 +603,7 @@ app.delete('/api/student/grade/:ids', auth, requireTeacher, (req, res) => {
 });
 
 // ============ 宿舍 API ============
-app.get('/api/student/dormitory/list', auth, requireTeacher, (req, res) => {
+app.get('/api/student/dormitory/list', auth, requireAdmin, (req, res) => {
   const db = load();
   let list = [...db.dormitories];
   const { buildingName, roomType, status } = req.query;
@@ -579,7 +624,7 @@ app.get('/api/student/dormitory/:id', (req, res) => {
   res.json({ data: db.dormitories.find(x => x.dormitoryId == req.params.id) || null });
 });
 
-app.post('/api/student/dormitory', auth, requireTeacher, (req, res) => {
+app.post('/api/student/dormitory', auth, requireAdmin, (req, res) => {
   const db = load();
   const id = nextId(db, 'dormitory');
   db.dormitories.push({ ...req.body, dormitoryId: id, occupiedCount: 0, createTime: now(), updateTime: '' });
@@ -587,7 +632,7 @@ app.post('/api/student/dormitory', auth, requireTeacher, (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.put('/api/student/dormitory', auth, requireTeacher, (req, res) => {
+app.put('/api/student/dormitory', auth, requireAdmin, (req, res) => {
   const db = load();
   const idx = db.dormitories.findIndex(x => x.dormitoryId == req.body.dormitoryId);
   if (idx === -1) return res.json({ code: 500, msg: '宿舍不存在' });
@@ -596,7 +641,7 @@ app.put('/api/student/dormitory', auth, requireTeacher, (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.delete('/api/student/dormitory/:ids', auth, requireTeacher, (req, res) => {
+app.delete('/api/student/dormitory/:ids', auth, requireAdmin, (req, res) => {
   const db = load();
   const ids = req.params.ids.split(',').map(Number);
   db.dormitories = db.dormitories.filter(d => !ids.includes(d.dormitoryId));
@@ -605,9 +650,14 @@ app.delete('/api/student/dormitory/:ids', auth, requireTeacher, (req, res) => {
 });
 
 // ============ 住宿分配 API ============
-app.get('/api/student/dormitory/assignment/list', auth, requireTeacher, (req, res) => {
+app.get('/api/student/dormitory/assignment/list', auth, requireAdmin, (req, res) => {
   const db = load();
   let list = [...db.assignments];
+  const managedClassId = getManagedClassId(req);
+  if (managedClassId) {
+    const classStudentIds = db.students.filter(s => s.classId == managedClassId).map(s => s.studentId);
+    list = list.filter(a => classStudentIds.includes(a.studentId));
+  }
   list.sort((a, b) => b.assignmentId - a.assignmentId);
   res.json(paginate(list, parseInt(req.query.pageNum) || 1, parseInt(req.query.pageSize) || 10));
 });
@@ -622,7 +672,7 @@ app.get('/api/student/dormitory/assignment/:id', (req, res) => {
   res.json({ data: db.assignments.find(x => x.assignmentId == req.params.id) || null });
 });
 
-app.post('/api/student/dormitory/assignment', auth, requireTeacher, (req, res) => {
+app.post('/api/student/dormitory/assignment', auth, requireAdmin, (req, res) => {
   const db = load();
   const dorm = db.dormitories.find(d => d.dormitoryId == req.body.dormitoryId);
   if (!dorm) return res.json({ code: 500, msg: '宿舍不存在' });
@@ -645,7 +695,7 @@ app.post('/api/student/dormitory/assignment', auth, requireTeacher, (req, res) =
   res.json({ code: 200, msg: '分配成功' });
 });
 
-app.put('/api/student/dormitory/assignment', auth, requireTeacher, (req, res) => {
+app.put('/api/student/dormitory/assignment', auth, requireAdmin, (req, res) => {
   const db = load();
   const idx = db.assignments.findIndex(x => x.assignmentId == req.body.assignmentId);
   if (idx === -1) return res.json({ code: 500, msg: '记录不存在' });
@@ -654,7 +704,7 @@ app.put('/api/student/dormitory/assignment', auth, requireTeacher, (req, res) =>
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.put('/api/student/dormitory/assignment/checkout/:id', auth, requireTeacher, (req, res) => {
+app.put('/api/student/dormitory/assignment/checkout/:id', auth, requireAdmin, (req, res) => {
   const db = load();
   const a = db.assignments.find(x => x.assignmentId == req.params.id);
   if (!a || a.isCurrent !== '1') return res.json({ code: 500, msg: '该记录不存在或已退宿' });
@@ -670,7 +720,7 @@ app.put('/api/student/dormitory/assignment/checkout/:id', auth, requireTeacher, 
   res.json({ code: 200, msg: '退宿成功' });
 });
 
-app.delete('/api/student/dormitory/assignment/:ids', auth, requireTeacher, (req, res) => {
+app.delete('/api/student/dormitory/assignment/:ids', auth, requireAdmin, (req, res) => {
   const db = load();
   const ids = req.params.ids.split(',').map(Number);
   db.assignments = db.assignments.filter(a => !ids.includes(a.assignmentId));
@@ -777,9 +827,14 @@ app.delete('/api/student/course/:ids', auth, requireTeacher, (req, res) => {
 });
 
 // ============ 奖惩记录 API ============
-app.get('/api/student/reward/list', auth, requireTeacher, (req, res) => {
+app.get('/api/student/reward/list', auth, requireAdmin, (req, res) => {
   const db = load();
   let list = [...db.rewards];
+  const managedClassId = getManagedClassId(req);
+  if (managedClassId) {
+    const classStudentIds = db.students.filter(s => s.classId == managedClassId).map(s => s.studentId);
+    list = list.filter(r => classStudentIds.includes(r.studentId));
+  }
   const { studentNo, studentName, type } = req.query;
   if (studentNo) list = list.filter(r => r.studentNo && r.studentNo.includes(studentNo));
   if (studentName) list = list.filter(r => r.studentName && r.studentName.includes(studentName));
@@ -793,7 +848,7 @@ app.get('/api/student/reward/:id', auth, (req, res) => {
   res.json({ data: db.rewards.find(x => x.rewardId == req.params.id) || null });
 });
 
-app.post('/api/student/reward', auth, requireTeacher, (req, res) => {
+app.post('/api/student/reward', auth, requireAdmin, (req, res) => {
   const db = load();
   const id = nextId(db, 'reward');
   const student = db.students.find(s => s.studentId == req.body.studentId);
@@ -805,7 +860,7 @@ app.post('/api/student/reward', auth, requireTeacher, (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.put('/api/student/reward', auth, requireTeacher, (req, res) => {
+app.put('/api/student/reward', auth, requireAdmin, (req, res) => {
   const db = load();
   const idx = db.rewards.findIndex(x => x.rewardId == req.body.rewardId);
   if (idx === -1) return res.json({ code: 500, msg: '记录不存在' });
@@ -818,7 +873,7 @@ app.put('/api/student/reward', auth, requireTeacher, (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.delete('/api/student/reward/:ids', auth, requireTeacher, (req, res) => {
+app.delete('/api/student/reward/:ids', auth, requireAdmin, (req, res) => {
   const db = load();
   const ids = req.params.ids.split(',').map(Number);
   db.rewards = db.rewards.filter(r => !ids.includes(r.rewardId));
@@ -827,9 +882,14 @@ app.delete('/api/student/reward/:ids', auth, requireTeacher, (req, res) => {
 });
 
 // ============ 资助记录 API ============
-app.get('/api/student/aid/list', auth, requireTeacher, (req, res) => {
+app.get('/api/student/aid/list', auth, requireAdmin, (req, res) => {
   const db = load();
   let list = [...db.aids];
+  const managedClassId = getManagedClassId(req);
+  if (managedClassId) {
+    const classStudentIds = db.students.filter(s => s.classId == managedClassId).map(s => s.studentId);
+    list = list.filter(r => classStudentIds.includes(r.studentId));
+  }
   const { studentNo, studentName, type } = req.query;
   if (studentNo) list = list.filter(r => r.studentNo && r.studentNo.includes(studentNo));
   if (studentName) list = list.filter(r => r.studentName && r.studentName.includes(studentName));
@@ -843,7 +903,7 @@ app.get('/api/student/aid/:id', auth, (req, res) => {
   res.json({ data: db.aids.find(x => x.aidId == req.params.id) || null });
 });
 
-app.post('/api/student/aid', auth, requireTeacher, (req, res) => {
+app.post('/api/student/aid', auth, requireAdmin, (req, res) => {
   const db = load();
   const id = nextId(db, 'aid');
   const student = db.students.find(s => s.studentId == req.body.studentId);
@@ -855,7 +915,7 @@ app.post('/api/student/aid', auth, requireTeacher, (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.put('/api/student/aid', auth, requireTeacher, (req, res) => {
+app.put('/api/student/aid', auth, requireAdmin, (req, res) => {
   const db = load();
   const idx = db.aids.findIndex(x => x.aidId == req.body.aidId);
   if (idx === -1) return res.json({ code: 500, msg: '记录不存在' });
@@ -868,7 +928,7 @@ app.put('/api/student/aid', auth, requireTeacher, (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.delete('/api/student/aid/:ids', auth, requireTeacher, (req, res) => {
+app.delete('/api/student/aid/:ids', auth, requireAdmin, (req, res) => {
   const db = load();
   const ids = req.params.ids.split(',').map(Number);
   db.aids = db.aids.filter(r => !ids.includes(r.aidId));
@@ -877,9 +937,14 @@ app.delete('/api/student/aid/:ids', auth, requireTeacher, (req, res) => {
 });
 
 // ============ 展赛获奖 API ============
-app.get('/api/student/award/list', auth, requireTeacher, (req, res) => {
+app.get('/api/student/award/list', auth, requireAdmin, (req, res) => {
   const db = load();
   let list = [...db.awards];
+  const managedClassId = getManagedClassId(req);
+  if (managedClassId) {
+    const classStudentIds = db.students.filter(s => s.classId == managedClassId).map(s => s.studentId);
+    list = list.filter(r => classStudentIds.includes(r.studentId));
+  }
   const { studentNo, studentName, level } = req.query;
   if (studentNo) list = list.filter(r => r.studentNo && r.studentNo.includes(studentNo));
   if (studentName) list = list.filter(r => r.studentName && r.studentName.includes(studentName));
@@ -893,7 +958,7 @@ app.get('/api/student/award/:id', auth, (req, res) => {
   res.json({ data: db.awards.find(x => x.awardId == req.params.id) || null });
 });
 
-app.post('/api/student/award', auth, requireTeacher, (req, res) => {
+app.post('/api/student/award', auth, requireAdmin, (req, res) => {
   const db = load();
   const id = nextId(db, 'award');
   const student = db.students.find(s => s.studentId == req.body.studentId);
@@ -905,7 +970,7 @@ app.post('/api/student/award', auth, requireTeacher, (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.put('/api/student/award', auth, requireTeacher, (req, res) => {
+app.put('/api/student/award', auth, requireAdmin, (req, res) => {
   const db = load();
   const idx = db.awards.findIndex(x => x.awardId == req.body.awardId);
   if (idx === -1) return res.json({ code: 500, msg: '记录不存在' });
@@ -918,7 +983,7 @@ app.put('/api/student/award', auth, requireTeacher, (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.delete('/api/student/award/:ids', auth, requireTeacher, (req, res) => {
+app.delete('/api/student/award/:ids', auth, requireAdmin, (req, res) => {
   const db = load();
   const ids = req.params.ids.split(',').map(Number);
   db.awards = db.awards.filter(r => !ids.includes(r.awardId));
@@ -927,9 +992,14 @@ app.delete('/api/student/award/:ids', auth, requireTeacher, (req, res) => {
 });
 
 // ============ 社团经历 API ============
-app.get('/api/student/club/list', auth, requireTeacher, (req, res) => {
+app.get('/api/student/club/list', auth, requireAdmin, (req, res) => {
   const db = load();
   let list = [...db.clubs];
+  const managedClassId = getManagedClassId(req);
+  if (managedClassId) {
+    const classStudentIds = db.students.filter(s => s.classId == managedClassId).map(s => s.studentId);
+    list = list.filter(r => classStudentIds.includes(r.studentId));
+  }
   const { studentNo, studentName, clubName } = req.query;
   if (studentNo) list = list.filter(r => r.studentNo && r.studentNo.includes(studentNo));
   if (studentName) list = list.filter(r => r.studentName && r.studentName.includes(studentName));
@@ -943,7 +1013,7 @@ app.get('/api/student/club/:id', auth, (req, res) => {
   res.json({ data: db.clubs.find(x => x.clubId == req.params.id) || null });
 });
 
-app.post('/api/student/club', auth, requireTeacher, (req, res) => {
+app.post('/api/student/club', auth, requireAdmin, (req, res) => {
   const db = load();
   const id = nextId(db, 'club');
   const student = db.students.find(s => s.studentId == req.body.studentId);
@@ -955,7 +1025,7 @@ app.post('/api/student/club', auth, requireTeacher, (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.put('/api/student/club', auth, requireTeacher, (req, res) => {
+app.put('/api/student/club', auth, requireAdmin, (req, res) => {
   const db = load();
   const idx = db.clubs.findIndex(x => x.clubId == req.body.clubId);
   if (idx === -1) return res.json({ code: 500, msg: '记录不存在' });
@@ -968,7 +1038,7 @@ app.put('/api/student/club', auth, requireTeacher, (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.delete('/api/student/club/:ids', auth, requireTeacher, (req, res) => {
+app.delete('/api/student/club/:ids', auth, requireAdmin, (req, res) => {
   const db = load();
   const ids = req.params.ids.split(',').map(Number);
   db.clubs = db.clubs.filter(r => !ids.includes(r.clubId));
@@ -977,9 +1047,14 @@ app.delete('/api/student/club/:ids', auth, requireTeacher, (req, res) => {
 });
 
 // ============ 学生干部 API ============
-app.get('/api/student/leadership/list', auth, requireTeacher, (req, res) => {
+app.get('/api/student/leadership/list', auth, requireAdmin, (req, res) => {
   const db = load();
   let list = [...db.leaderships];
+  const managedClassId = getManagedClassId(req);
+  if (managedClassId) {
+    const classStudentIds = db.students.filter(s => s.classId == managedClassId).map(s => s.studentId);
+    list = list.filter(r => classStudentIds.includes(r.studentId));
+  }
   const { studentNo, studentName, type } = req.query;
   if (studentNo) list = list.filter(r => r.studentNo && r.studentNo.includes(studentNo));
   if (studentName) list = list.filter(r => r.studentName && r.studentName.includes(studentName));
@@ -993,7 +1068,7 @@ app.get('/api/student/leadership/:id', auth, (req, res) => {
   res.json({ data: db.leaderships.find(x => x.leadershipId == req.params.id) || null });
 });
 
-app.post('/api/student/leadership', auth, requireTeacher, (req, res) => {
+app.post('/api/student/leadership', auth, requireAdmin, (req, res) => {
   const db = load();
   const id = nextId(db, 'leadership');
   const student = db.students.find(s => s.studentId == req.body.studentId);
@@ -1005,7 +1080,7 @@ app.post('/api/student/leadership', auth, requireTeacher, (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.put('/api/student/leadership', auth, requireTeacher, (req, res) => {
+app.put('/api/student/leadership', auth, requireAdmin, (req, res) => {
   const db = load();
   const idx = db.leaderships.findIndex(x => x.leadershipId == req.body.leadershipId);
   if (idx === -1) return res.json({ code: 500, msg: '记录不存在' });
@@ -1018,12 +1093,85 @@ app.put('/api/student/leadership', auth, requireTeacher, (req, res) => {
   res.json({ code: 200, msg: '操作成功' });
 });
 
-app.delete('/api/student/leadership/:ids', auth, requireTeacher, (req, res) => {
+app.delete('/api/student/leadership/:ids', auth, requireAdmin, (req, res) => {
   const db = load();
   const ids = req.params.ids.split(',').map(Number);
   db.leaderships = db.leaderships.filter(r => !ids.includes(r.leadershipId));
   save(db);
   res.json({ code: 200, msg: '操作成功' });
+});
+
+// ============ 账号管理 API（仅超管）============
+// 获取所有分管理账号
+app.get('/api/auth/sub-admins', auth, requireTeacher, (req, res) => {
+  const db = load();
+  const subAdmins = db.users
+    .filter(u => u.role === 'sub_admin')
+    .map(u => ({
+      userId: u.userId,
+      username: u.username,
+      displayName: u.displayName,
+      managedClassId: u.managedClassId,
+      managedClassName: u.managedClassName,
+      createTime: u.createTime
+    }));
+  res.json({ code: 200, data: subAdmins });
+});
+
+// 创建分管理账号
+app.post('/api/auth/sub-admin', auth, requireTeacher, (req, res) => {
+  const db = load();
+  const { username, password, displayName, managedClassId, managedClassName } = req.body;
+  if (!username || !password || !displayName || !managedClassId) {
+    return res.json({ code: 500, msg: '请填写完整信息（用户名、密码、显示名、管理班级）' });
+  }
+  if (db.users.find(u => u.username === username)) {
+    return res.json({ code: 500, msg: '用户名已存在' });
+  }
+  const cls = db.classes.find(c => c.classId == managedClassId);
+  if (!cls) return res.json({ code: 500, msg: '班级不存在' });
+  const user = {
+    userId: nextId(db, 'user'),
+    username: username,
+    password: bcrypt.hashSync(password, 10),
+    role: 'sub_admin',
+    displayName: displayName,
+    managedClassId: parseInt(managedClassId),
+    managedClassName: cls.className,
+    createTime: now()
+  };
+  db.users.push(user);
+  save(db);
+  res.json({ code: 200, msg: '分管理账号创建成功' });
+});
+
+// 修改分管理账号
+app.put('/api/auth/sub-admin', auth, requireTeacher, (req, res) => {
+  const db = load();
+  const u = db.users.find(u => u.userId == req.body.userId && u.role === 'sub_admin');
+  if (!u) return res.json({ code: 500, msg: '分管理账号不存在' });
+  if (req.body.password) {
+    u.password = bcrypt.hashSync(req.body.password, 10);
+  }
+  if (req.body.displayName) u.displayName = req.body.displayName;
+  if (req.body.managedClassId) {
+    const cls = db.classes.find(c => c.classId == req.body.managedClassId);
+    if (!cls) return res.json({ code: 500, msg: '班级不存在' });
+    u.managedClassId = parseInt(req.body.managedClassId);
+    u.managedClassName = cls.className;
+  }
+  save(db);
+  res.json({ code: 200, msg: '修改成功' });
+});
+
+// 删除分管理账号
+app.delete('/api/auth/sub-admin/:userId', auth, requireTeacher, (req, res) => {
+  const db = load();
+  const idx = db.users.findIndex(u => u.userId == req.params.userId && u.role === 'sub_admin');
+  if (idx === -1) return res.json({ code: 500, msg: '分管理账号不存在' });
+  db.users.splice(idx, 1);
+  save(db);
+  res.json({ code: 200, msg: '删除成功' });
 });
 
 // ============ 仪表盘统计 ============
@@ -1038,14 +1186,31 @@ app.get('/api/dashboard/sync-status', auth, (req, res) => {
 
 app.get('/api/dashboard/stats', auth, (req, res) => {
   const db = load();
-  res.json({
-    studentCount: db.students.filter(s => s.status === '0').length,
-    classCount: db.classes.filter(c => c.status === '0').length,
-    dormitoryCount: db.dormitories.length,
-    courseCount: db.courses.filter(c => c.status === '0').length,
-    availableBeds: db.dormitories.reduce((sum, d) => sum + Math.max(0, d.bedCount - d.occupiedCount), 0),
-    passRate: db.grades.length > 0 ? (db.grades.filter(g => g.isPassed === '1').length / db.grades.length * 100).toFixed(1) : 0
-  });
+  const managedClassId = getManagedClassId(req);
+  if (managedClassId) {
+    // 分管理：只看自己班级的数据
+    const classStudents = db.students.filter(s => s.classId == managedClassId && s.status === '0');
+    const classStudentIds = classStudents.map(s => s.studentId);
+    const classGrades = db.grades.filter(g => classStudentIds.includes(g.studentId));
+    res.json({
+      studentCount: classStudents.length,
+      classCount: 1,
+      dormitoryCount: db.dormitories.length,
+      courseCount: db.courses.filter(c => c.status === '0').length,
+      availableBeds: db.dormitories.reduce((sum, d) => sum + Math.max(0, d.bedCount - d.occupiedCount), 0),
+      passRate: classGrades.length > 0 ? (classGrades.filter(g => g.isPassed === '1').length / classGrades.length * 100).toFixed(1) : 0,
+      managedClassName: req.user.managedClassName || ''
+    });
+  } else {
+    res.json({
+      studentCount: db.students.filter(s => s.status === '0').length,
+      classCount: db.classes.filter(c => c.status === '0').length,
+      dormitoryCount: db.dormitories.length,
+      courseCount: db.courses.filter(c => c.status === '0').length,
+      availableBeds: db.dormitories.reduce((sum, d) => sum + Math.max(0, d.bedCount - d.occupiedCount), 0),
+      passRate: db.grades.length > 0 ? (db.grades.filter(g => g.isPassed === '1').length / db.grades.length * 100).toFixed(1) : 0
+    });
+  }
 });
 
 // ============ 认证 API ============
@@ -1064,6 +1229,8 @@ app.post('/api/auth/login', (req, res) => {
     role: user.role,
     displayName: user.displayName,
     studentId: user.studentId || null,
+    managedClassId: user.managedClassId || null,
+    managedClassName: user.managedClassName || null,
     exp: Math.floor(Date.now() / 1000) + JWT_EXPIRES
   });
   res.json({
@@ -1071,7 +1238,7 @@ app.post('/api/auth/login', (req, res) => {
     msg: '登录成功',
     data: {
       token,
-      user: { userId: user.userId, username: user.username, role: user.role, displayName: user.displayName, studentId: user.studentId || null }
+      user: { userId: user.userId, username: user.username, role: user.role, displayName: user.displayName, studentId: user.studentId || null, managedClassId: user.managedClassId || null, managedClassName: user.managedClassName || null }
     }
   });
 });
