@@ -1927,22 +1927,7 @@
       "expiresAt": 1785893152631
     }
   },
-  "rewards": [
-    {
-      "studentId": 8,
-      "type": "奖励",
-      "name": "志愿服务之星",
-      "level": "校级",
-      "date": "",
-      "org": "",
-      "description": "",
-      "rewardId": 1,
-      "studentName": "万金灵",
-      "studentNo": "1235031001",
-      "createTime": "2026-08-04 05:02:27",
-      "updateTime": ""
-    }
-  ],
+  "rewards": [],
   "aids": [],
   "awards": [],
   "clubs": [],
