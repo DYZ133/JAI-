@@ -1509,7 +1509,7 @@
     "class": 25,
     "course": 7,
     "user": 44,
-    "reward": 1,
+    "reward": 2,
     "aid": 1,
     "award": 1,
     "club": 1,
@@ -1927,7 +1927,22 @@
       "expiresAt": 1785893152631
     }
   },
-  "rewards": [],
+  "rewards": [
+    {
+      "studentId": 8,
+      "type": "奖励",
+      "name": "志愿服务之星",
+      "level": "校级",
+      "date": "",
+      "org": "",
+      "description": "",
+      "rewardId": 1,
+      "studentName": "万金灵",
+      "studentNo": "1235031001",
+      "createTime": "2026-08-04 05:02:27",
+      "updateTime": ""
+    }
+  ],
   "aids": [],
   "awards": [],
   "clubs": [],
