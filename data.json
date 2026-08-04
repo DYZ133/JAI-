@@ -1511,7 +1511,7 @@
     "user": 44,
     "reward": 3,
     "aid": 2,
-    "award": 1,
+    "award": 2,
     "club": 1,
     "leadership": 1
   },
@@ -1959,7 +1959,22 @@
       "updateTime": ""
     }
   ],
-  "awards": [],
+  "awards": [
+    {
+      "studentId": 4,
+      "competition": "好创意",
+      "award": "二等奖",
+      "level": "国家级",
+      "date": "",
+      "org": "",
+      "description": "",
+      "awardId": 1,
+      "studentName": "董一喆",
+      "studentNo": "1235031007",
+      "createTime": "2026-08-04 05:03:39",
+      "updateTime": ""
+    }
+  ],
   "clubs": [],
   "leaderships": []
 }
