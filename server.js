@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const XLSX = require('xlsx');
 
 // ========== JWT 无状态令牌（解决 Vercel 多实例 session 不共享问题）==========
 const JWT_SECRET = process.env.JWT_SECRET || 'student-system-jwt-secret-2026-key';
@@ -169,13 +170,28 @@ function load() {
   // /tmp/data.json 不存在：冷启动
   if (!fs.existsSync(DB_FILE)) {
     if (IS_VERCEL) {
-      // 尝试从 GitHub 拉取
-      const latest = fetchLatestFromGitHub();
+      // 尝试从 GitHub 拉取（重试 3 次，间隔 2 秒）
+      let latest = null;
+      for (let retry = 0; retry < 3; retry++) {
+        latest = fetchLatestFromGitHub();
+        if (latest) break;
+        if (retry < 2) {
+          console.log('[Load] GitHub 拉取失败，2秒后重试... (' + (retry + 1) + '/3)');
+          require('child_process').execSync('sleep 2', { timeout: 3000 });
+        }
+      }
       if (latest) return latest;
       // GitHub 拉取失败，回退到部署包中的种子文件
+      console.error('[Load] ⚠️ GitHub 同步失败！使用种子数据（可能缺少用户数据）');
       if (fs.existsSync(SEED_FILE)) {
+        // 安全检查：种子文件不应该包含实际用户数据
+        const seedData = JSON.parse(fs.readFileSync(SEED_FILE, 'utf-8'));
+        if (seedData.users && seedData.users.length > 1) {
+          console.error('[Load] ⚠️⚠️⚠️ 警告：种子文件包含用户数据，可能覆盖了实时数据！');
+          console.error('[Load] 种子文件中有 ' + seedData.users.length + ' 个用户，' + seedData.students.length + ' 个学生');
+        }
         fs.copyFileSync(SEED_FILE, DB_FILE);
-        return JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
+        return seedData;
       }
     }
     // 本地开发或首次启动：创建空数据库
@@ -1159,6 +1175,378 @@ app.post('/api/data/import', auth, requireTeacher, (req, res) => {
     res.json({ code: 200, msg: '数据导入成功' });
   } catch (e) {
     res.json({ code: 500, msg: '导入失败：' + e.message });
+  }
+});
+
+// ============ Excel 模板下载 ============
+app.get('/api/data/template/:type', auth, requireTeacher, (req, res) => {
+  try {
+    const type = req.params.type;
+    const wb = XLSX.utils.book_new();
+
+    if (type === 'student') {
+      // 学生模板
+      const headers = ['学号', '姓名', '性别(0男1女)', '出生日期', '身份证号', '手机', '邮箱', '籍贯', '民族', '政治面貌', '班级编号', '班级名称', '入学日期', '毕业日期', '状态(0在读)', '备注'];
+      const sampleRows = [
+        ['2025001', '张明', '0', '2006-05-12', '', '13800001001', 'zhang@edu.cn', '江苏南京', '汉族', '共青团员', '1', '', '2025-09-01', '2029-07-01', '0', ''],
+        ['2025002', '李丽', '1', '2007-01-20', '', '13800001002', '', '浙江杭州', '汉族', '群众', '', '24技术1班', '2025-09-01', '', '0', '']
+      ];
+      const data = [headers, ...sampleRows];
+      const sheet = XLSX.utils.aoa_to_sheet(data);
+      // 设置列宽
+      sheet['!cols'] = headers.map(h => ({ wch: Math.max(h.length * 2, 14) }));
+
+      const instructions = [
+        ['学生信息导入模板说明'],
+        [''],
+        ['必填字段：学号、姓名'],
+        [''],
+        ['性别：0=男, 1=女（也可填"男"或"女"）'],
+        ['状态：0=在读, 1=休学, 2=退学, 3=毕业（默认0）'],
+        ['班级编号：填写系统中的classId数字。可在系统"班级管理"页面查看各班级的ID'],
+        ['班级名称：如不填班级编号，可填班级名称进行匹配（如"24技术1班"）'],
+        ['出生日期/入学日期/毕业日期：格式为YYYY-MM-DD（如2006-05-12）'],
+        ['身份证号、手机、邮箱、籍贯、民族、政治面貌、备注：选填'],
+        [''],
+        ['提示：已存在的学号会被自动跳过，不会覆盖已有数据。'],
+        ['系统会自动为学生创建登录账号（用户名=学号，初始密码=123456）']
+      ];
+      const instSheet = XLSX.utils.aoa_to_sheet(instructions);
+      instSheet['!cols'] = [{ wch: 60 }];
+
+      XLSX.utils.book_append_sheet(wb, sheet, '数据');
+      XLSX.utils.book_append_sheet(wb, instSheet, '说明');
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=student-template.xlsx');
+
+    } else if (type === 'grade') {
+      // 成绩模板
+      const headers = ['学号', '课程编号', '课程名称', '成绩', '绩点(自动计算)', '等级(自动计算)', '学期', '考试类型', '补考成绩', '备注'];
+      const sampleRows = [
+        ['2025001', '1', '', '92.5', '', '', '2025-2026-1', '期末', '', ''],
+        ['2025001', '', '高等数学（上）', '78', '', '', '2025-2026-1', '期中', '', '']
+      ];
+      const data = [headers, ...sampleRows];
+      const sheet = XLSX.utils.aoa_to_sheet(data);
+      sheet['!cols'] = headers.map(h => ({ wch: Math.max(h.length * 2, 14) }));
+
+      const instructions = [
+        ['成绩导入模板说明'],
+        [''],
+        ['必填字段：学号、课程（编号或名称二选一）、成绩、学期'],
+        [''],
+        ['学号：必须在系统中已存在的学生。未找到的学生行会被跳过。'],
+        ['课程编号：系统中的courseId数字。可与课程名称二选一（优先使用编号）。'],
+        ['课程名称：如不填课程编号，可填课程名称进行精确匹配。'],
+        ['成绩：0-100之间的数值。绩点和等级由系统自动计算，无需填写。'],
+        ['学期：格式如"2025-2026-1"表示2025-2026学年第一学期。'],
+        ['考试类型：期末/期中/补考/重修，默认"期末"。'],
+        ['补考成绩：如有补考，填写补考分数。备注：选填'],
+        [''],
+        ['提示：学号对应的学生必须在系统中已存在，否则该行会被跳过。']
+      ];
+      const instSheet = XLSX.utils.aoa_to_sheet(instructions);
+      instSheet['!cols'] = [{ wch: 60 }];
+
+      XLSX.utils.book_append_sheet(wb, sheet, '数据');
+      XLSX.utils.book_append_sheet(wb, instSheet, '说明');
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=grade-template.xlsx');
+
+    } else {
+      return res.json({ code: 500, msg: '不支持的模板类型，请使用 student 或 grade' });
+    }
+
+    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.send(buf);
+  } catch (e) {
+    console.error('[Template] 生成失败:', e.message);
+    res.json({ code: 500, msg: '模板生成失败：' + e.message });
+  }
+});
+
+// ============ Excel 导入 API ============
+app.post('/api/data/import-excel', auth, requireTeacher, (req, res) => {
+  try {
+    const { data: base64Data, type } = req.body;
+    if (!base64Data || !type) {
+      return res.json({ code: 500, msg: '缺少 data 或 type 参数' });
+    }
+    if (type !== 'student' && type !== 'grade') {
+      return res.json({ code: 500, msg: 'type 必须为 student 或 grade' });
+    }
+
+    // 解码 base64
+    let buf;
+    try {
+      buf = Buffer.from(base64Data, 'base64');
+    } catch (e) {
+      return res.json({ code: 500, msg: 'Base64 解码失败，请检查文件' });
+    }
+
+    // 解析 Excel
+    let wb;
+    try {
+      wb = XLSX.read(buf, { type: 'buffer' });
+    } catch (e) {
+      return res.json({ code: 500, msg: 'Excel 文件解析失败，请确认文件格式正确（.xlsx）' });
+    }
+
+    if (!wb.SheetNames || wb.SheetNames.length === 0) {
+      return res.json({ code: 500, msg: 'Excel 文件中没有工作表' });
+    }
+
+    const sheetName = wb.SheetNames[0];
+    const sheet = wb.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+    if (rows.length < 2) {
+      return res.json({ code: 500, msg: 'Excel 文件中没有数据行（至少需要表头+1行数据）' });
+    }
+
+    // 跳过表头，处理数据行
+    const dataRows = rows.slice(1).filter(row => {
+      // 过滤完全空行
+      return row.some(cell => cell !== '' && cell !== null && cell !== undefined);
+    });
+
+    if (dataRows.length === 0) {
+      return res.json({ code: 500, msg: 'Excel 文件中没有有效数据行' });
+    }
+
+    const db = load();
+    const warnings = [];
+    let successCount = 0;
+
+    if (type === 'student') {
+      for (let i = 0; i < dataRows.length; i++) {
+        const row = dataRows[i];
+        const rowNum = i + 2; // Excel 行号（1-based + 表头）
+
+        // 列映射
+        let studentNo = String(row[0] || '').trim();
+        let studentName = String(row[1] || '').trim();
+        let gender = String(row[2] || '').trim();
+        const birthDate = String(row[3] || '').trim();
+        const idCard = String(row[4] || '').trim();
+        const phone = String(row[5] || '').trim();
+        const email = String(row[6] || '').trim();
+        const nativePlace = String(row[7] || '').trim();
+        let nation = String(row[8] || '').trim();
+        const politicalStatus = String(row[9] || '').trim();
+        let classIdRaw = row[10];
+        let classNameRaw = String(row[11] || '').trim();
+        const enrollmentDate = String(row[12] || '').trim();
+        const graduationDate = String(row[13] || '').trim();
+        let status = String(row[14] || '').trim();
+        const remark = String(row[15] || '').trim();
+
+        // 校验必填
+        if (!studentNo) {
+          warnings.push('第' + rowNum + '行：学号为空，已跳过');
+          continue;
+        }
+        if (!studentName) {
+          warnings.push('第' + rowNum + '行：姓名为空，已跳过');
+          continue;
+        }
+
+        // 去重检查
+        if (db.students.find(s => s.studentNo === studentNo)) {
+          warnings.push('第' + rowNum + '行：学号 ' + studentNo + ' 已存在，已跳过');
+          continue;
+        }
+
+        // 性别转换
+        if (gender === '男') gender = '0';
+        else if (gender === '女') gender = '1';
+        if (gender !== '0' && gender !== '1') gender = '0';
+
+        // 状态转换
+        if (status === '在读') status = '0';
+        else if (status === '休学') status = '1';
+        else if (status === '退学') status = '2';
+        else if (status === '毕业') status = '3';
+        if (!['0', '1', '2', '3'].includes(status)) status = '0';
+
+        // 默认民族
+        if (!nation) nation = '汉族';
+
+        // 班级匹配
+        let classId = '';
+        let className = '';
+        let classObj = null;
+
+        // 优先用班级编号
+        if (classIdRaw !== '' && classIdRaw !== null && classIdRaw !== undefined) {
+          const cid = parseInt(classIdRaw);
+          if (!isNaN(cid)) {
+            classObj = db.classes.find(c => c.classId === cid);
+            if (classObj) {
+              classId = classObj.classId;
+              className = classObj.className;
+            }
+          }
+        }
+
+        // 班级编号匹配失败，尝试班级名称
+        if (!classObj && classNameRaw) {
+          classObj = db.classes.find(c => c.className === classNameRaw);
+          if (!classObj) {
+            // 模糊匹配：包含关系
+            classObj = db.classes.find(c => c.className.includes(classNameRaw) || classNameRaw.includes(c.className));
+          }
+          if (classObj) {
+            classId = classObj.classId;
+            className = classObj.className;
+          } else {
+            warnings.push('第' + rowNum + '行：班级 "' + classNameRaw + '" 未匹配到，学生已导入但班级为空');
+            className = classNameRaw; // 保留原始输入
+          }
+        }
+
+        if (!classObj && !classNameRaw) {
+          warnings.push('第' + rowNum + '行：未填写班级信息，学生已导入但班级为空');
+        }
+
+        // 创建学生
+        const id = nextId(db, 'student');
+        db.students.push({
+          studentId: id,
+          studentNo, studentName, gender, birthDate, idCard, phone, email,
+          nativePlace, nation, politicalStatus,
+          classId, className,
+          enrollmentDate, graduationDate, status,
+          createBy: req.user.username || 'admin',
+          createTime: now(),
+          updateBy: '', updateTime: '', remark
+        });
+
+        // 更新班级人数
+        if (classObj) {
+          classObj.studentCount = (classObj.studentCount || 0) + 1;
+        }
+
+        // 自动创建学生账号
+        createStudentUser(db, studentNo, studentName, id);
+
+        successCount++;
+      }
+    } else if (type === 'grade') {
+      for (let i = 0; i < dataRows.length; i++) {
+        const row = dataRows[i];
+        const rowNum = i + 2;
+
+        let studentNo = String(row[0] || '').trim();
+        let courseIdRaw = row[1];
+        let courseNameRaw = String(row[2] || '').trim();
+        let scoreRaw = row[3];
+        // 列4=绩点（忽略，自动计算）
+        // 列5=等级（忽略，自动计算）
+        let semester = String(row[6] || '').trim();
+        let examType = String(row[7] || '').trim();
+        let makeupScoreRaw = row[8];
+        const remark = String(row[9] || '').trim();
+
+        // 校验必填
+        if (!studentNo) {
+          warnings.push('第' + rowNum + '行：学号为空，已跳过');
+          continue;
+        }
+
+        // 查找学生
+        const student = db.students.find(s => s.studentNo === studentNo);
+        if (!student) {
+          warnings.push('第' + rowNum + '行：学号 ' + studentNo + ' 在系统中不存在，已跳过');
+          continue;
+        }
+
+        // 查找课程
+        let courseObj = null;
+        if (courseIdRaw !== '' && courseIdRaw !== null && courseIdRaw !== undefined) {
+          const cid = parseInt(courseIdRaw);
+          if (!isNaN(cid)) {
+            courseObj = db.courses.find(c => c.courseId === cid);
+          }
+        }
+        if (!courseObj && courseNameRaw) {
+          courseObj = db.courses.find(c => c.courseName === courseNameRaw);
+          if (!courseObj) {
+            courseObj = db.courses.find(c => c.courseName.includes(courseNameRaw) || courseNameRaw.includes(c.courseName));
+          }
+        }
+        if (!courseObj) {
+          warnings.push('第' + rowNum + '行：课程 "' + (courseNameRaw || courseIdRaw) + '" 未找到，已跳过');
+          continue;
+        }
+
+        // 成绩
+        let score = parseFloat(scoreRaw);
+        if (isNaN(score) || score < 0 || score > 100) {
+          warnings.push('第' + rowNum + '行：成绩 ' + scoreRaw + ' 无效（需0-100），已跳过');
+          continue;
+        }
+
+        // 学期
+        if (!semester) {
+          warnings.push('第' + rowNum + '行：学期为空，已跳过');
+          continue;
+        }
+
+        // 考试类型默认值
+        if (!examType) examType = '期末';
+        if (!['期末', '期中', '补考', '重修'].includes(examType)) {
+          warnings.push('第' + rowNum + '行：考试类型 "' + examType + '" 无效，已设为"期末"');
+          examType = '期末';
+        }
+
+        // 补考成绩
+        let makeupScore = null;
+        if (makeupScoreRaw !== '' && makeupScoreRaw !== null && makeupScoreRaw !== undefined) {
+          makeupScore = parseFloat(makeupScoreRaw);
+          if (isNaN(makeupScore) || makeupScore < 0 || makeupScore > 100) {
+            makeupScore = null;
+          }
+        }
+
+        const { gradeLevel, gradePoint } = calcGrade(score);
+
+        const id = nextId(db, 'grade');
+        db.grades.push({
+          gradeId: id,
+          studentId: student.studentId,
+          studentName: student.studentName,
+          studentNo: student.studentNo,
+          courseId: courseObj.courseId,
+          courseName: courseObj.courseName,
+          score, gradePoint, gradeLevel,
+          semester, examType,
+          makeupScore,
+          isPassed: score >= 60 ? '1' : '0',
+          createBy: req.user.username || 'admin',
+          createTime: now(),
+          updateBy: '', updateTime: '', remark
+        });
+
+        successCount++;
+      }
+    }
+
+    save(db);
+
+    res.json({
+      code: 200,
+      msg: '导入完成',
+      data: {
+        total: dataRows.length,
+        success: successCount,
+        skipped: dataRows.length - successCount,
+        warnings: warnings
+      }
+    });
+  } catch (e) {
+    console.error('[Excel Import] 导入失败:', e.message);
+    res.json({ code: 500, msg: 'Excel 导入失败：' + e.message });
   }
 });
 

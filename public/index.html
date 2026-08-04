@@ -82,11 +82,16 @@ body { font-family: 'Microsoft YaHei', sans-serif; background: #f0f2f5; color: #
         </div>
         <div class="card-box">
           <h3 style="margin-bottom:12px">💾 数据管理</h3>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
             <el-button size="small" type="primary" icon="el-icon-download" @click="exportData">导出数据备份</el-button>
-            <el-button size="small" type="warning" icon="el-icon-upload2" @click="$refs.importFile.click()">导入数据恢复</el-button>
-            <input type="file" ref="importFile" accept=".json" style="display:none" @change="importData">
-            <span style="font-size:12px;color:#999;line-height:32px;margin-left:8px">导出可备份全部数据，导入可恢复之前的数据。部署到云端后，重新部署会重置数据，建议提前导出备份。</span>
+            <el-button size="small" type="warning" icon="el-icon-upload2" @click="importType='json';$refs.importFile.click()">JSON备份恢复</el-button>
+            <span style="color:#ddd;margin:0 4px">|</span>
+            <el-button size="small" type="success" icon="el-icon-upload2" @click="importType='student';$refs.importFile.click()">导入学生Excel</el-button>
+            <el-button size="small" type="success" icon="el-icon-upload2" @click="importType='grade';$refs.importFile.click()">导入成绩Excel</el-button>
+            <el-button size="small" icon="el-icon-download" @click="downloadTemplate('student')">📥 学生模板</el-button>
+            <el-button size="small" icon="el-icon-download" @click="downloadTemplate('grade')">📥 成绩模板</el-button>
+            <input type="file" ref="importFile" accept=".json,.xlsx,.xls" style="display:none" @change="importData">
+            <span style="font-size:12px;color:#999;line-height:32px;margin-left:8px">下载模板→填写数据→导入Excel。追加不覆盖，已存在学号自动跳过。</span>
           </div>
         </div>
         <div class="card-box">
@@ -584,6 +589,26 @@ body { font-family: 'Microsoft YaHei', sans-serif; background: #f0f2f5; color: #
     <el-table :data="gradeViewList" size="small"><el-table-column prop="courseName" label="课程"></el-table-column><el-table-column prop="score" label="分数" width="70"></el-table-column><el-table-column prop="gradePoint" label="绩点" width="60"></el-table-column><el-table-column label="等级" width="70"><template slot-scope="s"><el-tag :type="levelTag(s.row.gradeLevel)" size="small">{{s.row.gradeLevel}}</el-tag></template></el-table-column><el-table-column prop="semester" label="学期" width="110"></el-table-column><el-table-column prop="examType" label="类型" width="60"></el-table-column><el-table-column label="通过" width="60"><template slot-scope="s"><span :style="{color:s.row.isPassed==='1'?'#52c41a':'#f5222d'}">{{s.row.isPassed==='1'?'是':'否'}}</span></template></el-table-column></el-table>
     <div slot="footer"><el-button @click="gradeViewDialog=false">关闭</el-button></div>
   </el-dialog>
+
+  <!-- Excel导入结果弹窗 -->
+  <el-dialog title="导入结果" :visible.sync="importResultDialog" width="600px">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:48px;color:#67c23a" v-if="importResult.skipped===0">✅</div>
+      <div style="font-size:48px;color:#e6a23c" v-else>⚠️</div>
+      <p style="font-size:16px;margin-top:8px">
+        共 {{importResult.total}} 条，成功 <b style="color:#67c23a">{{importResult.success}}</b> 条，跳过 <b style="color:#e6a23c">{{importResult.skipped}}</b> 条
+      </p>
+    </div>
+    <div v-if="importResult.warnings.length > 0">
+      <h4 style="color:#e6a23c;margin-bottom:8px">注意事项：</h4>
+      <div style="max-height:250px;overflow-y:auto;background:#fdf6ec;border:1px solid #faecd8;border-radius:4px;padding:8px 12px;font-size:13px;line-height:1.8">
+        <div v-for="(w,i) in importResult.warnings" :key="i" style="color:#e6a23c">{{w}}</div>
+      </div>
+    </div>
+    <div slot="footer">
+      <el-button type="primary" @click="importResultDialog=false;refreshAfterImport()">确定</el-button>
+    </div>
+  </el-dialog>
 </div>
 
 <script src="/lib/vue/dist/vue.js"></script>
@@ -683,7 +708,10 @@ new Vue({
     // 干部
     ldList:[], ldSelected:[], ldPage:{pageNum:1,pageSize:10,total:0},
     ldQuery:{studentNo:'',studentName:'',type:''},
-    ldDialog:false, ldForm:{}
+    ldDialog:false, ldForm:{},
+    // Excel导入
+    importType:'json', importResultDialog:false,
+    importResult:{total:0,success:0,skipped:0,warnings:[]}
   },
   computed: {
     recentStudents: function() { return this.sList.slice(0, 5); }
@@ -1002,29 +1030,100 @@ new Vue({
       var self = this;
       var file = e.target.files[0];
       if (!file) return;
-      this.$confirm('导入数据将覆盖当前所有数据，确认继续？', '警告', {confirmButtonText:'确认导入',cancelButtonText:'取消',type:'warning'}).then(function() {
+
+      // JSON 路径：原有逻辑
+      if (this.importType === 'json') {
+        this.$confirm('导入JSON数据将覆盖当前所有数据，确认继续？', '警告', {confirmButtonText:'确认导入',cancelButtonText:'取消',type:'warning'}).then(function() {
+          var reader = new FileReader();
+          reader.onload = function(ev) {
+            try {
+              var data = JSON.parse(ev.target.result);
+              api.post('/data/import', data).then(function(r) {
+                if (r.data.code === 200) {
+                  self.$message.success('数据已导入，页面即将刷新');
+                  setTimeout(function() { location.reload(); }, 1500);
+                } else {
+                  self.$message.error(r.data.msg);
+                }
+              }).catch(function() {
+                self.$message.error('导入失败');
+              });
+            } catch (err) {
+              self.$message.error('JSON 格式解析失败，请检查文件');
+            }
+          };
+          reader.readAsText(file);
+        }).catch(function() {});
+        e.target.value = '';
+        return;
+      }
+
+      // Excel 路径：base64 上传
+      var importLabel = this.importType === 'student' ? '学生' : '成绩';
+      this.$confirm('导入' + importLabel + 'Excel将<b>追加</b>新记录，不会覆盖已有数据。已存在的学号会被跳过。确认继续？', '提示', {
+        confirmButtonText: '确认导入', cancelButtonText: '取消', type: 'info',
+        dangerouslyUseHTMLString: true
+      }).then(function() {
         var reader = new FileReader();
         reader.onload = function(ev) {
-          try {
-            var data = JSON.parse(ev.target.result);
-            api.post('/data/import', data).then(function(r) {
-              if (r.data.code === 200) {
-                self.$message.success('数据已导入，页面即将刷新');
-                setTimeout(function() { location.reload(); }, 1500);
-              } else {
-                self.$message.error(r.data.msg);
-              }
-            }).catch(function() {
-              self.$message.error('导入失败');
-            });
-          } catch (err) {
-            self.$message.error('JSON 格式解析失败，请检查文件');
+          var arrayBuffer = ev.target.result;
+          var bytes = new Uint8Array(arrayBuffer);
+          var binary = '';
+          var len = bytes.byteLength;
+          for (var i = 0; i < len; i++) {
+            binary += String.fromCharCode(bytes[i]);
           }
+          var base64 = btoa(binary);
+
+          var loading = self.$loading({text:'正在导入，请稍候...',spinner:'el-icon-loading',background:'rgba(0,0,0,0.3)'});
+
+          api.post('/data/import-excel', {
+            data: base64,
+            type: self.importType
+          }).then(function(r) {
+            loading.close();
+            if (r.data.code === 200) {
+              self.importResult = r.data.data;
+              self.importResultDialog = true;
+            } else {
+              self.$message.error(r.data.msg);
+            }
+          }).catch(function(err) {
+            loading.close();
+            self.$message.error('导入请求失败，请检查网络或文件大小');
+            console.error(err);
+          });
         };
-        reader.readAsText(file);
+        reader.readAsArrayBuffer(file);
       }).catch(function() {});
-      // 清空 input 以便重复选择同一文件
+
       e.target.value = '';
+    },
+    downloadTemplate: function(type) {
+      api.get('/data/template/' + type, { responseType: 'blob' }).then(function(r) {
+        var blob = new Blob([r.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = type + '-template.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }).catch(function(err) {
+        console.error('模板下载失败:', err);
+      });
+    },
+    refreshAfterImport: function() {
+      if (this.importType === 'student') {
+        this.loadStudents();
+        var self = this;
+        api.get('/student/class/all').then(function(r) { self.classList = r.data.data || []; });
+        api.get('/student/info/all').then(function(r) { self.allStudents = r.data.data || []; });
+      } else if (this.importType === 'grade') {
+        this.loadGrades();
+      }
+      this.loadDashboard();
     }
   }
 });
