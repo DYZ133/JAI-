@@ -1513,7 +1513,7 @@
     "aid": 2,
     "award": 2,
     "club": 2,
-    "leadership": 1
+    "leadership": 2
   },
   "users": [
     {
@@ -1990,5 +1990,20 @@
       "updateTime": ""
     }
   ],
-  "leaderships": []
+  "leaderships": [
+    {
+      "studentId": 4,
+      "type": "班级干部",
+      "position": "班长",
+      "department": "23级虚拟现实1班",
+      "startDate": "",
+      "endDate": "",
+      "description": "",
+      "leadershipId": 1,
+      "studentName": "董一喆",
+      "studentNo": "1235031007",
+      "createTime": "2026-08-04 05:04:19",
+      "updateTime": ""
+    }
+  ]
 }
