@@ -894,6 +894,27 @@
       "updateBy": "",
       "updateTime": "",
       "remark": ""
+    },
+    {
+      "studentNo": "123456",
+      "studentName": "葛子硕",
+      "gender": "0",
+      "birthDate": "",
+      "classId": null,
+      "phone": "",
+      "email": "",
+      "idCard": "",
+      "nativePlace": "",
+      "nation": "",
+      "politicalStatus": "",
+      "enrollmentDate": "",
+      "graduationDate": "",
+      "status": "0",
+      "remark": "",
+      "studentId": 46,
+      "className": "",
+      "createTime": "2026-08-04 05:01:18",
+      "updateTime": ""
     }
   ],
   "grades": [],
@@ -1481,13 +1502,13 @@
     }
   ],
   "nextId": {
-    "student": 46,
+    "student": 47,
     "grade": 7,
     "dormitory": 7,
     "assignment": 3,
     "class": 25,
     "course": 7,
-    "user": 43,
+    "user": 44,
     "reward": 1,
     "aid": 1,
     "award": 1,
@@ -1853,6 +1874,15 @@
       "displayName": "苑靖宇",
       "studentId": 45,
       "createTime": "2026-08-04 04:54:35"
+    },
+    {
+      "userId": 43,
+      "username": "123456",
+      "password": "$2b$10$w0AMr0rjOQWTTc6Fk8/xM.9abRXNkXy.WlxtrBa3uFWw/T4SnlpMe",
+      "role": "student",
+      "displayName": "葛子硕",
+      "studentId": 46,
+      "createTime": "2026-08-04 05:01:18"
     }
   ],
   "sessions": {
