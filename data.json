@@ -1490,7 +1490,7 @@
     "assignment": 3,
     "class": 25,
     "course": 7,
-    "user": 51,
+    "user": 52,
     "reward": 1,
     "aid": 1,
     "award": 1,
@@ -1856,6 +1856,16 @@
       "displayName": "苑靖宇",
       "studentId": 51,
       "createTime": "2026-08-04 05:39:37"
+    },
+    {
+      "userId": 51,
+      "username": "23级虚拟现实1班",
+      "password": "$2b$10$Xj2qjhqcvQXQjQR8uwI1nu2M3rCo4TgjtHgcQWbG9G4dHxOyjFySG",
+      "role": "sub_admin",
+      "displayName": "23级虚拟现实1班管理员",
+      "managedClassId": 5,
+      "managedClassName": "23虚拟现实1班",
+      "createTime": "2026-08-04 05:40:28"
     }
   ],
   "rewards": [],
