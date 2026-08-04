@@ -887,15 +887,15 @@
       "nativePlace": "",
       "nation": "汉族",
       "politicalStatus": "",
-      "classId": "",
-      "className": "23级虚拟现实1班",
+      "classId": 5,
+      "className": "23虚拟现实1班",
       "enrollmentDate": "",
       "graduationDate": "",
       "status": "0",
       "createBy": "admin",
       "createTime": "2026-08-04 05:39:37",
       "updateBy": "",
-      "updateTime": "",
+      "updateTime": "2026-08-04 05:41:40",
       "remark": ""
     }
   ],
