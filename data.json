@@ -1493,7 +1493,7 @@
     "user": 52,
     "reward": 1,
     "aid": 1,
-    "award": 1,
+    "award": 2,
     "club": 1,
     "leadership": 1
   },
@@ -1870,7 +1870,22 @@
   ],
   "rewards": [],
   "aids": [],
-  "awards": [],
+  "awards": [
+    {
+      "studentId": 51,
+      "competition": "2025年吉林省虚拟现实大赛",
+      "award": "三等奖",
+      "level": "省级",
+      "date": "",
+      "org": "",
+      "description": "",
+      "awardId": 1,
+      "studentName": "苑靖宇",
+      "studentNo": "1235031040",
+      "createTime": "2026-08-04 05:43:10",
+      "updateTime": ""
+    }
+  ],
   "clubs": [],
   "leaderships": []
 }
