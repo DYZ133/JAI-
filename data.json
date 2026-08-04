@@ -795,7 +795,7 @@
       "nativePlace": "",
       "nation": "汉族",
       "politicalStatus": "",
-      "classId": "",
+      "classId": 5,
       "className": "23级虚拟现实1班",
       "enrollmentDate": "",
       "graduationDate": "",
@@ -803,7 +803,7 @@
       "createBy": "admin",
       "createTime": "2026-08-04 05:39:37",
       "updateBy": "",
-      "updateTime": "",
+      "updateTime": "2026-08-04 05:54:10",
       "remark": ""
     },
     {
