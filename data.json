@@ -1492,7 +1492,7 @@
     "course": 7,
     "user": 52,
     "reward": 1,
-    "aid": 1,
+    "aid": 2,
     "award": 2,
     "club": 1,
     "leadership": 1
@@ -1869,7 +1869,22 @@
     }
   ],
   "rewards": [],
-  "aids": [],
+  "aids": [
+    {
+      "studentId": 51,
+      "type": "奖学金",
+      "name": "国家励志奖学金",
+      "amount": 6000,
+      "date": "",
+      "org": "",
+      "description": "",
+      "aidId": 1,
+      "studentName": "苑靖宇",
+      "studentNo": "1235031040",
+      "createTime": "2026-08-04 05:43:33",
+      "updateTime": ""
+    }
+  ],
   "awards": [
     {
       "studentId": 51,
