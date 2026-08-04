@@ -289,7 +289,7 @@ function seed(db) {
     classDefs.forEach(cd => {
       db.classes.push({
         classId: nextId(db, 'class'),
-        className: g.substring(2, 4) + cd.suffix,
+        className: g.substring(2, 4) + '级' + cd.suffix,
         grade: g,
         major: cd.major,
         department: '人工智能学院',
