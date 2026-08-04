@@ -1510,7 +1510,7 @@
     "course": 7,
     "user": 44,
     "reward": 3,
-    "aid": 1,
+    "aid": 2,
     "award": 1,
     "club": 1,
     "leadership": 1
@@ -1943,7 +1943,22 @@
       "updateTime": ""
     }
   ],
-  "aids": [],
+  "aids": [
+    {
+      "studentId": 4,
+      "type": "助学金",
+      "name": "二等助学金",
+      "amount": 3300,
+      "date": "",
+      "org": "",
+      "description": "",
+      "aidId": 1,
+      "studentName": "董一喆",
+      "studentNo": "1235031007",
+      "createTime": "2026-08-04 05:03:08",
+      "updateTime": ""
+    }
+  ],
   "awards": [],
   "clubs": [],
   "leaderships": []
