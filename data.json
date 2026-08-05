@@ -1492,7 +1492,7 @@
     "course": 7,
     "user": 52,
     "reward": 4,
-    "aid": 3,
+    "aid": 4,
     "award": 2,
     "club": 1,
     "leadership": 1
@@ -1939,6 +1939,20 @@
       "studentName": "董一喆",
       "studentNo": "1235031007",
       "createTime": "2026-08-05 06:40:11",
+      "updateTime": ""
+    },
+    {
+      "studentId": 19,
+      "type": "奖学金",
+      "name": "国家励志奖学金",
+      "amount": 6000,
+      "date": "",
+      "org": "",
+      "description": "",
+      "aidId": 3,
+      "studentName": "董一喆",
+      "studentNo": "1235031007",
+      "createTime": "2026-08-05 06:40:29",
       "updateTime": ""
     }
   ],
