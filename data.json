@@ -1493,7 +1493,7 @@
     "user": 52,
     "reward": 4,
     "aid": 4,
-    "award": 15,
+    "award": 16,
     "club": 1,
     "leadership": 1
   },
@@ -2151,6 +2151,20 @@
       "studentName": "董一喆",
       "studentNo": "1235031007",
       "createTime": "2026-08-05 06:48:24",
+      "updateTime": ""
+    },
+    {
+      "studentId": 19,
+      "competition": "第20届好创意红色文化专项赛道",
+      "award": "二等奖",
+      "level": "国家级",
+      "date": "",
+      "org": "",
+      "description": "",
+      "awardId": 15,
+      "studentName": "董一喆",
+      "studentNo": "1235031007",
+      "createTime": "2026-08-05 06:49:17",
       "updateTime": ""
     }
   ],
