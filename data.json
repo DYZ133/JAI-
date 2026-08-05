@@ -1495,7 +1495,7 @@
     "aid": 4,
     "award": 17,
     "club": 2,
-    "leadership": 3
+    "leadership": 4
   },
   "users": [
     {
@@ -2225,6 +2225,20 @@
       "studentNo": "1235031007",
       "createTime": "2026-08-05 06:51:21",
       "updateTime": "2026-08-05 06:51:34"
+    },
+    {
+      "studentId": 19,
+      "type": "学生会",
+      "position": "执行主席",
+      "department": "人工智能学院主席团",
+      "startDate": "",
+      "endDate": "",
+      "description": "",
+      "leadershipId": 3,
+      "studentName": "董一喆",
+      "studentNo": "1235031007",
+      "createTime": "2026-08-05 06:52:01",
+      "updateTime": ""
     }
   ]
 }
