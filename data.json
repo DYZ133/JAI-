@@ -1493,7 +1493,7 @@
     "user": 52,
     "reward": 4,
     "aid": 4,
-    "award": 14,
+    "award": 15,
     "club": 1,
     "leadership": 1
   },
@@ -2137,6 +2137,20 @@
       "studentName": "董一喆",
       "studentNo": "1235031007",
       "createTime": "2026-08-05 06:47:57",
+      "updateTime": ""
+    },
+    {
+      "studentId": 19,
+      "competition": "第六届ICAD国际当代青年美术设计大赛",
+      "award": "铜奖",
+      "level": "国家级",
+      "date": "",
+      "org": "",
+      "description": "",
+      "awardId": 14,
+      "studentName": "董一喆",
+      "studentNo": "1235031007",
+      "createTime": "2026-08-05 06:48:24",
       "updateTime": ""
     }
   ],
