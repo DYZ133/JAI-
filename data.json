@@ -1493,7 +1493,7 @@
     "user": 52,
     "reward": 4,
     "aid": 4,
-    "award": 5,
+    "award": 6,
     "club": 1,
     "leadership": 1
   },
@@ -2011,6 +2011,20 @@
       "studentName": "董一喆",
       "studentNo": "1235031007",
       "createTime": "2026-08-05 06:42:02",
+      "updateTime": ""
+    },
+    {
+      "studentId": 19,
+      "competition": "2025年”创青春“吉林省青年创新创业大赛",
+      "award": "一等奖",
+      "level": "省级",
+      "date": "",
+      "org": "",
+      "description": "",
+      "awardId": 5,
+      "studentName": "董一喆",
+      "studentNo": "1235031007",
+      "createTime": "2026-08-05 06:42:46",
       "updateTime": ""
     }
   ],
