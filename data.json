@@ -1493,7 +1493,7 @@
     "user": 52,
     "reward": 4,
     "aid": 4,
-    "award": 10,
+    "award": 11,
     "club": 1,
     "leadership": 1
   },
@@ -2081,6 +2081,20 @@
       "studentName": "董一喆",
       "studentNo": "1235031007",
       "createTime": "2026-08-05 06:44:28",
+      "updateTime": ""
+    },
+    {
+      "studentId": 19,
+      "competition": "第三届全国大学生职业规划大赛吉林省决赛",
+      "award": "铜奖",
+      "level": "省级",
+      "date": "",
+      "org": "",
+      "description": "",
+      "awardId": 10,
+      "studentName": "董一喆",
+      "studentNo": "1235031007",
+      "createTime": "2026-08-05 06:45:06",
       "updateTime": ""
     }
   ],
