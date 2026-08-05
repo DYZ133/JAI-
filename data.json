@@ -1491,7 +1491,7 @@
     "class": 25,
     "course": 7,
     "user": 52,
-    "reward": 1,
+    "reward": 2,
     "aid": 2,
     "award": 2,
     "club": 1,
@@ -1868,7 +1868,22 @@
       "createTime": "2026-08-04 05:40:28"
     }
   ],
-  "rewards": [],
+  "rewards": [
+    {
+      "studentId": 19,
+      "type": "奖励",
+      "name": "志愿服务之星",
+      "level": "校级",
+      "date": "",
+      "org": "",
+      "description": "",
+      "rewardId": 1,
+      "studentName": "董一喆",
+      "studentNo": "1235031007",
+      "createTime": "2026-08-05 06:39:08",
+      "updateTime": ""
+    }
+  ],
   "aids": [
     {
       "studentId": 51,
