@@ -1494,7 +1494,7 @@
     "reward": 4,
     "aid": 4,
     "award": 17,
-    "club": 1,
+    "club": 2,
     "leadership": 1
   },
   "users": [
@@ -2182,6 +2182,20 @@
       "updateTime": ""
     }
   ],
-  "clubs": [],
+  "clubs": [
+    {
+      "studentId": 19,
+      "clubName": "数智创界EI社",
+      "position": "社长",
+      "joinDate": "",
+      "leaveDate": "",
+      "description": "",
+      "clubId": 1,
+      "studentName": "董一喆",
+      "studentNo": "1235031007",
+      "createTime": "2026-08-05 06:50:39",
+      "updateTime": ""
+    }
+  ],
   "leaderships": []
 }
