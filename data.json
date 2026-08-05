@@ -1495,7 +1495,7 @@
     "aid": 4,
     "award": 17,
     "club": 2,
-    "leadership": 2
+    "leadership": 3
   },
   "users": [
     {
@@ -2210,6 +2210,20 @@
       "studentName": "董一喆",
       "studentNo": "1235031007",
       "createTime": "2026-08-05 06:50:59",
+      "updateTime": ""
+    },
+    {
+      "studentId": 19,
+      "type": "团委",
+      "position": "社会实践部部长",
+      "department": "社会实践部",
+      "startDate": "",
+      "endDate": "",
+      "description": "",
+      "leadershipId": 2,
+      "studentName": "董一喆",
+      "studentNo": "1235031007",
+      "createTime": "2026-08-05 06:51:21",
       "updateTime": ""
     }
   ]
