@@ -902,25 +902,6 @@
   "grades": [],
   "dormitories": [
     {
-      "dormitoryId": 4,
-      "buildingName": "北苑1号楼",
-      "floor": 2,
-      "roomNo": "201",
-      "bedCount": 4,
-      "occupiedCount": 0,
-      "roomType": "四人间",
-      "hasBalcony": "1",
-      "hasAircon": "1",
-      "hasWashroom": "1",
-      "monthlyFee": 800,
-      "status": "0",
-      "createBy": "admin",
-      "createTime": "",
-      "updateBy": "",
-      "updateTime": "",
-      "remark": ""
-    },
-    {
       "dormitoryId": 5,
       "buildingName": "南苑1号楼",
       "floor": 1,
