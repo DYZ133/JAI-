@@ -1493,7 +1493,7 @@
     "user": 52,
     "reward": 4,
     "aid": 4,
-    "award": 7,
+    "award": 8,
     "club": 1,
     "leadership": 1
   },
@@ -2039,6 +2039,20 @@
       "studentName": "董一喆",
       "studentNo": "1235031007",
       "createTime": "2026-08-05 06:43:11",
+      "updateTime": ""
+    },
+    {
+      "studentId": 19,
+      "competition": "第七届吉林省高校冰雪创意大赛",
+      "award": "三等奖",
+      "level": "省级",
+      "date": "",
+      "org": "",
+      "description": "",
+      "awardId": 7,
+      "studentName": "董一喆",
+      "studentNo": "1235031007",
+      "createTime": "2026-08-05 06:43:41",
       "updateTime": ""
     }
   ],
