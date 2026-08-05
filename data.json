@@ -1493,7 +1493,7 @@
     "user": 52,
     "reward": 4,
     "aid": 4,
-    "award": 9,
+    "award": 10,
     "club": 1,
     "leadership": 1
   },
@@ -2067,6 +2067,20 @@
       "studentName": "董一喆",
       "studentNo": "1235031007",
       "createTime": "2026-08-05 06:44:00",
+      "updateTime": ""
+    },
+    {
+      "studentId": 19,
+      "competition": "第二届全国大学生新文科实践创新大赛",
+      "award": "铜奖",
+      "level": "国家级",
+      "date": "",
+      "org": "",
+      "description": "",
+      "awardId": 9,
+      "studentName": "董一喆",
+      "studentNo": "1235031007",
+      "createTime": "2026-08-05 06:44:28",
       "updateTime": ""
     }
   ],
