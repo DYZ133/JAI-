@@ -1493,7 +1493,7 @@
     "user": 52,
     "reward": 4,
     "aid": 4,
-    "award": 16,
+    "award": 17,
     "club": 1,
     "leadership": 1
   },
@@ -2165,6 +2165,20 @@
       "studentName": "董一喆",
       "studentNo": "1235031007",
       "createTime": "2026-08-05 06:49:17",
+      "updateTime": ""
+    },
+    {
+      "studentId": 19,
+      "competition": "第20届好创意",
+      "award": "三等奖",
+      "level": "省级",
+      "date": "",
+      "org": "",
+      "description": "",
+      "awardId": 16,
+      "studentName": "董一喆",
+      "studentNo": "1235031007",
+      "createTime": "2026-08-05 06:49:43",
       "updateTime": ""
     }
   ],
