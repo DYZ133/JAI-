@@ -1493,7 +1493,7 @@
     "user": 52,
     "reward": 4,
     "aid": 4,
-    "award": 2,
+    "award": 3,
     "club": 1,
     "leadership": 1
   },
@@ -1969,6 +1969,20 @@
       "studentName": "苑靖宇",
       "studentNo": "1235031040",
       "createTime": "2026-08-04 05:43:10",
+      "updateTime": ""
+    },
+    {
+      "studentId": 19,
+      "competition": "第十五届三创赛",
+      "award": "二等奖",
+      "level": "省级",
+      "date": "",
+      "org": "",
+      "description": "",
+      "awardId": 2,
+      "studentName": "董一喆",
+      "studentNo": "1235031007",
+      "createTime": "2026-08-05 06:41:17",
       "updateTime": ""
     }
   ],
