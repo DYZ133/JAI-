@@ -1493,7 +1493,7 @@
     "user": 52,
     "reward": 4,
     "aid": 4,
-    "award": 4,
+    "award": 5,
     "club": 1,
     "leadership": 1
   },
@@ -1997,6 +1997,20 @@
       "studentName": "董一喆",
       "studentNo": "1235031007",
       "createTime": "2026-08-05 06:41:38",
+      "updateTime": ""
+    },
+    {
+      "studentId": 19,
+      "competition": "第七届中新联合作品展",
+      "award": "优秀奖",
+      "level": "省级",
+      "date": "",
+      "org": "",
+      "description": "",
+      "awardId": 4,
+      "studentName": "董一喆",
+      "studentNo": "1235031007",
+      "createTime": "2026-08-05 06:42:02",
       "updateTime": ""
     }
   ],
