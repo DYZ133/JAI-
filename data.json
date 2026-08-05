@@ -914,12 +914,27 @@
       "status": "0",
       "remark": "",
       "dormitoryId": 7,
-      "occupiedCount": 0,
+      "occupiedCount": 1,
       "createTime": "2026-08-05 06:53:10",
       "updateTime": ""
     }
   ],
-  "assignments": [],
+  "assignments": [
+    {
+      "studentId": 19,
+      "dormitoryId": 7,
+      "bedNo": "A床",
+      "checkInDate": "2026-08-05",
+      "assignmentId": 3,
+      "isCurrent": "1",
+      "studentName": "董一喆",
+      "studentNo": "1235031007",
+      "buildingName": "10",
+      "roomNo": "10230",
+      "createTime": "2026-08-05 06:58:24",
+      "updateTime": ""
+    }
+  ],
   "classes": [
     {
       "classId": 1,
@@ -1390,7 +1405,7 @@
     "student": 52,
     "grade": 7,
     "dormitory": 8,
-    "assignment": 3,
+    "assignment": 4,
     "class": 25,
     "course": 7,
     "user": 52,
