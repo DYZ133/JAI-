@@ -900,7 +900,25 @@
     }
   ],
   "grades": [],
-  "dormitories": [],
+  "dormitories": [
+    {
+      "buildingName": "10",
+      "floor": 2,
+      "roomNo": "10230",
+      "bedCount": 4,
+      "roomType": "四人间",
+      "hasBalcony": "1",
+      "hasAircon": "1",
+      "hasWashroom": "0",
+      "monthlyFee": 0,
+      "status": "0",
+      "remark": "",
+      "dormitoryId": 7,
+      "occupiedCount": 0,
+      "createTime": "2026-08-05 06:53:10",
+      "updateTime": ""
+    }
+  ],
   "assignments": [],
   "classes": [
     {
@@ -1371,7 +1389,7 @@
   "nextId": {
     "student": 52,
     "grade": 7,
-    "dormitory": 7,
+    "dormitory": 8,
     "assignment": 3,
     "class": 25,
     "course": 7,
