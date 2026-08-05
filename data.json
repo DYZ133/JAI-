@@ -1493,7 +1493,7 @@
     "user": 52,
     "reward": 4,
     "aid": 4,
-    "award": 11,
+    "award": 12,
     "club": 1,
     "leadership": 1
   },
@@ -2095,6 +2095,20 @@
       "studentName": "董一喆",
       "studentNo": "1235031007",
       "createTime": "2026-08-05 06:45:06",
+      "updateTime": ""
+    },
+    {
+      "studentId": 19,
+      "competition": "第十九届全国大学生计算机设计大赛吉林省赛",
+      "award": "二等奖",
+      "level": "省级",
+      "date": "",
+      "org": "",
+      "description": "",
+      "awardId": 11,
+      "studentName": "董一喆",
+      "studentNo": "1235031007",
+      "createTime": "2026-08-05 06:46:39",
       "updateTime": ""
     }
   ],
